@@ -10,10 +10,16 @@ import numpy as np
 
 
 
-# board: pot, smallBlindAmount, bigBlindAmount, boardCardsVisible, boardCards
-# players: holeCards, stacks, bets, isSmallBlind, isBigBlind, isPlayersTurn, hasActed
-# availableActions: fold, callAmount, raiseMinMax
-# controlVariables: bettingRound, gameEndState
+
+
+
+
+
+
+
+
+
+    
 
 
 
@@ -37,9 +43,13 @@ def setActingPlayerIdx(playerStates, playerIdx):
 
 def getActingPlayerIdx(playerStates): return np.where(playerStates[:,6] != 0)[0][0]
 
+def getBigBlindPlayerIdx(playerState): return np.argmax(playerState[:,5])
+
 def setHasPlayerActed(playerState, playerIdx):
     playerState[playerIdx,7] = 1
     return playerState
+
+def getNumPlayersActed(playerState): return np.sum(playerState[:,7])
 
 
 # Board .......................................................................
@@ -56,6 +66,12 @@ def movePotToPlayer(playerState, playerIdx, boardState):
     playerState[playerIdx,2] += boardState[0]           # Stacks
     boardState[0] = 0
     return playerState, boardState
+
+def getBoardCardsVisible(boardState): return board[3:8]
+
+def setBoardCardsVisible(boardState, visibleMask):
+    boardState[3:8] = visibleMask
+    return boardState
 
 
 # Actions .....................................................................
@@ -80,9 +96,34 @@ def setGameEndState(controlVariables, availableActions):
     availableActions[:] = -1
     return controlVariables, availableActions
 
+def getBettingRound(controlVariables): return controlVariables[0]
+
+def setBettingRound(controlVariables, bettingRound): 
+    controlVariables[0] = bettingRound
+    return controlVariables
+
+
+# Initializers ................................................................
+def initNextBettingRound(boardState, playerState, controlVariables):
+    playerState[:,7] = 0    # Reset has players acted
+    
+    # Set visible board cards
+    bettingRound = getBettingRound(controlVariables)
+    boardCardsVisible = getBoardCardsVisible(boardState)
+    boardCardsVisible[:3+min(bettingRound,2)] = 1
+    boardState = setBoardCardsVisible(boardState, boardCardsVisible) 
+    
+    # Next betting round
+    bettingRound += 1
+    controlVariables = setBettingRound(controlVariables, bettingRound)
+    
+    # Big blind acts first on the flop, turn and river
+    playerIdx = getBigBlindPlayerIdx(playerState)
+    playerState = setActingPlayerIdx(playerState, playerIdx)
+    
+    return boardState, playerState, controlVariables
 
 def initGame(boardCards, smallBlindPlayerIdx, smallBlindAmount, stacks, holeCards):
-    
     # Set board
     board = np.zeros(13, dtype=np.int)
     board[0] = 0                    # Pot
@@ -160,8 +201,8 @@ board, players, controlVariables, availableActions = initGame(boardCards, smallB
 # Only one action can be declared, for instance, [-1,-1, 25] means raise to 25.
 
 #action = np.array([-1,-1,raiseMinMax[1]])
-#action = np.array([-1,getCallAmount(availableActions),-1])
-action = np.array([1,-1,-1])
+action = np.array([-1,getCallAmount(availableActions),-1])
+#action = np.array([1,-1,-1])
 
 
 
@@ -189,7 +230,6 @@ action = np.array([1,-1,-1])
     if(np.sum(action > -1) != 1):
         print('ERROR 0')
         return None
-        
     # Check that call and raise amounts are valid
     if( (action[1] > -1) and (action[1] != callAmount) ):
         print('ERROR 1')
@@ -197,12 +237,11 @@ action = np.array([1,-1,-1])
     if( (action[2] > -1) and ((action[2] < raiseMinMax[0]) or (action[2] > raiseMinMax[1])) ):
         print('ERROR 2')
         return None
-        
     # Check that stacks are not negative
     if(np.any(stacks < 0)):
         print('ERROR 3')
         return None
-        
+    
     actionToExecute = np.argmax(action)
     secondPlayerIdx = np.abs(actingPlayerIdx-1)
     
@@ -212,38 +251,29 @@ action = np.array([1,-1,-1])
         players, board = moveBetsToPot(players, board)
         players, board = movePotToPlayer(players, secondPlayerIdx, board)
         players = setHasPlayerActed(players, actingPlayerIdx)
-
         print('* * * * * PLAYER FOLDS * * * * * *')
         
         return board, players, controlVariables, availableActions
-        
     
     # Player either calls or raises
     if(actionToExecute == 1 or actionToExecute == 2):
         amount = action[actionToExecute]
-        
-        stacks[actingPlayerIdx] -= amount
-        bets[actingPlayerIdx] += amount
+        players = setBet(players, amount, actingPlayerIdx)
     
         # Check that stacks are not negative after the action
+        # TODO: refactor
         if(np.any(stacks < 0)):
             print('ERROR')
             return None
-    
-        numPlayersActed += 1
-        nextPlayerIdx = secondPlayerIdx
-     
+        
+        players = setHasPlayerActed(players, actingPlayerIdx)
+        numPlayersActed = getNumPlayersActed(players)        
+        bets = getBets(players)
+        
         # Check if both players have acted and the bets are equal -> next betting round or showdown
         if( (numPlayersActed >= 2) and (np.sum(np.diff(bets)) == 0) ):
-            pot += np.sum(bets)
-            bets[:] = 0
-            numPlayersActed = 0
-            boardCardsVisible[:3+min(bettingRound,2)] = boardCards[:3+min(bettingRound,2)]
-            bettingRound += 1
-            
-            # Big blind acts first on the flop, turn and river
-            bigBlindPlayerIdx = blindPositions[1]
-            nextPlayerIdx = bigBlindPlayerIdx
+            players, board = moveBetsToPot(players, board)
+            board, players, controlVariables = initNextBettingRound(board, players, controlVariables)
             
             # If all-in situation then go to the showdown
             if(np.min(stacks) == 0): bettingRound = 4
