@@ -66,8 +66,11 @@ def getBoardCards(boardState): return boardState[8:]
 # Actions .....................................................................
 def getAvailableActions(playerState, boardState):
     
-    playerState = players
-    boardState = board
+    # TODO: fix bug in available actions
+    controlVariables = np.array([1, 0])
+    availableActions = np.array([21,  5,  5])
+    playerState = np.array([[14, 28,  5, 21,  0,  1,  0,  1,  0],[22, 48, 21,  0,  1,  0,  1,  1,  0]])
+    boardState = np.array([16,  4,  8,  1,  1,  1,  0,  0, 18, 20, 12, 50,  0])
     
     bets = getBets(playerState)
     stacks = getStacks(playerState)
