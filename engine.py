@@ -65,13 +65,6 @@ def getBoardCards(boardState): return boardState[8:]
                 
 # Actions .....................................................................
 def getAvailableActions(playerState, boardState):
-    
-    # TODO: fix bug in available actions
-    controlVariables = np.array([1, 0])
-    availableActions = np.array([21,  5,  5])
-    playerState = np.array([[14, 28,  5, 21,  0,  1,  0,  1,  0],[22, 48, 21,  0,  1,  0,  1,  1,  0]])
-    boardState = np.array([16,  4,  8,  1,  1,  1,  0,  0, 18, 20, 12, 50,  0])
-    
     bets = getBets(playerState)
     stacks = getStacks(playerState)
     bigBlindAmount = getBigBlindAmount(boardState)
@@ -79,6 +72,10 @@ def getAvailableActions(playerState, boardState):
     maxRaiseAmount = np.min(stacks)
     raiseMinMax = np.array([min(max(callAmount+bigBlindAmount,callAmount*2), maxRaiseAmount), 
                             maxRaiseAmount])   # Max raise is all-in
+    
+    if(np.max(raiseMinMax) <= callAmount):
+        raiseMinMax[:] = -1
+    
     return np.concatenate((np.array([callAmount]),raiseMinMax))
 
 def getCallAmount(availableActions): return availableActions[0]
@@ -91,6 +88,9 @@ def setGameEndState(controlVariables, availableActions):
     controlVariables[1] = 1
     availableActions[:] = -1
     return controlVariables, availableActions
+
+def getGameEndState(controlVariables):
+    return controlVariables[1]
 
 def getBettingRound(controlVariables): return controlVariables[0]
 
@@ -164,56 +164,13 @@ def initGame(boardCards, smallBlindPlayerIdx, smallBlindAmount, stacks, holeCard
     return board, players, controlVariables, availableActions
 
 
-
-
-
-# %%
-
-tmpCards = np.random.choice(52, size=9, replace=0)
-boardCards = tmpCards[:5]
-holeCards = np.array([tmpCards[5:7],tmpCards[7:]])
-smallBlindPlayerIdx = 1     # Which player is small blind?
-smallBlindAmount = 4
-stacks = np.array([smallBlindAmount*8+2,smallBlindAmount*6+5])
-
-
-
-# %%
-
-
-board, players, controlVariables, availableActions = initGame(boardCards, smallBlindPlayerIdx, 
-                                                              smallBlindAmount, stacks, holeCards)
-
-
-    
-
-
-# %%
-    
-# In 'action' 
-#   1st index is fold
-#   2nd is call amount
-#   3rd is raise amount. 
-# Only one action can be declared, for instance, [-1,-1, 25] means raise to 25.
-
-
-action = np.array([-1,-1,getRaiseAmount(availableActions)[1]])
-
-#action = np.array([-1,getCallAmount(availableActions),-1])
-#action = np.array([1,-1,-1])
-
-
-
-board, players, controlVariables, availableActions = executeAction(board, players, controlVariables, 
-                                                                   action, availableActions)
-
-
-    
-    
-
-# %%
-#
+# .............................................................................
+# Game logic
 def executeAction(board, players, controlVariables, action, availableActions):
+    
+    if(getGameEndState == 1):
+        return None
+    
     callAmount = getCallAmount(availableActions)
     raiseMinMax = getRaiseAmount(availableActions)
     actingPlayerIdx = getActingPlayerIdx(players)
@@ -302,6 +259,50 @@ def executeAction(board, players, controlVariables, action, availableActions):
 
 
 
+
+
+
+
+
+# %%
+
+tmpCards = np.random.choice(52, size=9, replace=0)
+boardCards = tmpCards[:5]
+holeCards = np.array([tmpCards[5:7],tmpCards[7:]])
+smallBlindPlayerIdx = 1     # Which player is small blind?
+smallBlindAmount = 4
+stacks = np.array([smallBlindAmount*8+2,smallBlindAmount*6+5])
+
+
+
+# %%
+
+
+board, players, controlVariables, availableActions = initGame(boardCards, smallBlindPlayerIdx, 
+                                                              smallBlindAmount, stacks, holeCards)
+
+
+    
+
+
+# %%
+    
+# In 'action' 
+#   1st index is fold
+#   2nd is call amount
+#   3rd is raise amount. 
+# Only one action can be declared, for instance, [-1,-1, 25] means raise to 25.
+
+
+#action = np.array([-1,-1,getRaiseAmount(availableActions)[1]])
+
+action = np.array([-1,getCallAmount(availableActions),-1])
+#action = np.array([1,-1,-1])
+
+
+
+board, players, controlVariables, availableActions = executeAction(board, players, controlVariables, 
+                                                                   action, availableActions)
 
 
 
