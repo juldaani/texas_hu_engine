@@ -8,17 +8,18 @@ Created on Tue Dec 25 15:32:22 2018
 
 import unittest
 import numpy as np
-import itertools
+#import itertools
 
-from hand_eval.evaluator import evaluate
-from texas_hu_engine.engine import initGame, executeAction
+#from hand_eval.evaluator import evaluate
+from texas_hu_engine.engine import initGame, executeAction, getCallAmount, getGameEndState, \
+    getStacks, getRaiseAmount, getBets, getPot
 from hand_eval.params import cardToInt, intToCard
 
 SEED = 123
-
+N_ROUNDS = 1000
 
 """
-- evaluate cards correctly
+* evaluate cards correctly
 - pot not negative
 - stacks not negative
 - bets not negative
@@ -48,12 +49,7 @@ SEED = 123
 
 
 # %%
-# Evalueate cards correctly
-
-
-np.random.seed(SEED)
-
-
+# Evaluate cards correctly
 
 def convertCardToInt(cards):
     return [cardToInt[card] for card in cards]
@@ -61,47 +57,136 @@ def convertCardToInt(cards):
 def convertIntToCard(ints):
     return [intToCard[intt] for intt in ints]
 
+np.random.seed(SEED)
 
-
-board = np.array(
+boardCards = [
         ['2h', '4h', '5h', '6s', '7d'],
-        )
+        ['Qc', '2c', '3d', '4h', '5s'],
+        ['Ks', '2d', '4h', '5s', 'Th'],
+        ['Th', '2d', '5h', '8s', '7c'],
+        ['6s', '7d', '8h', 'Tc', 'Qh'],
+        ['Js', 'Qs', 'Ks', '2d', '4h'],
+        ['Tc', 'Th', 'Td', '8h', '9c'],
+        ['Kc', 'Ks', 'Kh', '2s', '3s'],
+        ['7d', '8d', '9d', 'Jh', 'Qs'],
+        ['Qs', 'Ks', 'As', '2d', '6c']
+        ]
 
-worseHoleCards = np.array(
-        [']
-        )
-betterHoleCards = np.array(
-        ['9s', 'Kc'],
-        )
+worseHoleCards = [
+        ['9d','Jd'],    # high
+        ['9c','Kc'],    # high
+        ['Kd','7h'],    # pair
+        ['3s','9s'],    # high
+        ['6d','7s'],    # two pairs
+        ['3d','4s'],    # pair
+        ['Jh','Qh'],    # straight
+        ['Ts','Td'],    # full house
+        ['Tc','Kc'],    # straight
+        ['3s','5s']    # flush
+        ]
+betterHoleCards = [
+        ['9s','Kc'],    # high
+        ['Qs','Th'],    # pair
+        ['Kc','2c'],    # two pairs
+        ['Ts','Td'],    # three
+        ['4s','5s'],    # straight
+        ['3s','5s'],    # flush
+        ['7c','7h'],    # full house
+        ['Kd','Td'],    # four
+        ['5d','6d'],    # straight flush
+        ['Ts','Js']    # royal flush
+        ]
 
-high = ['2h', '4h', '5h', '6s', '7d', '9s', 'Kc']
-pair = ['Qs', 'Qc', '2c', '3d', '4h', '5s', 'Th']
-twopairs = ['Ks', 'Kc', '2c', '2d', '4h', '5s', 'Th']
-three = ['Th', 'Ts', 'Td', '2d', '5h', '8s', '7c']
-straight = ['4s', '5s', '6s', '7d', '8h', 'Tc', 'Qh']
-flush = ['3s', '5s', 'Js', 'Qs', 'Ks', '2d', '4h']
-fullhouse = ['7c', '7h', 'Tc', 'Th', 'Td', '2h', '3c']
-four = ['Kc', 'Ks', 'Kh', 'Kd', 'Td', '2s', '3s']
-straighflush = ['5d', '6d', '7d', '8d', '9d', 'Jh', 'Qs', 'Kc']
-royalflush = ['Ts', 'Js', 'Qs', 'Ks', 'As', '2d', '6c']
 
-handsToTest = np.array([royalflush, straighflush, four, fullhouse, flush, straight, three, 
-              twopairs, pair, high])
-
-n = len(handsToTest)
-k = 2
-combs = np.array(list(itertools.combinations(np.arange(n), k)))
-
-for comb in combs:
-    betterHand = handsToTest[comb[0]]
-    worseHand = handsToTest[comb[1]]
+for worseHole, betterHole, boardC in zip(worseHoleCards,betterHoleCards,boardCards):
     
-    evaluatedRankForBetterHand, _ = evaluate(convertCardToInt(betterHand))
-    evaluatedRankForWorseHand, _ = evaluate(convertCardToInt(worseHand))
+    # Init game
+    boardC = np.array(convertCardToInt(boardC))
+    holeCards = np.array([convertCardToInt(betterHole),convertCardToInt(worseHole)])
+    smallBlindPlayerIdx = 1     # Which player is small blind?
+    smallBlindAmount = 4
+    initStackAmount = 100
+    stacks = np.array([initStackAmount,initStackAmount])
+    board, players, controlVariables, availableActions = initGame(boardC, smallBlindPlayerIdx, 
+                                                                  smallBlindAmount, stacks, holeCards)
+    # Execute call actions only
+    while(1):    
+        action = np.array([-1,getCallAmount(availableActions),-1])
+        board, players, controlVariables, availableActions = executeAction(board, players, controlVariables, 
+                                                                           action, availableActions)
+        if(getGameEndState(controlVariables)==1):
+            break
     
-    # Lower rank means better hand
-    assert evaluatedRankForBetterHand < evaluatedRankForWorseHand
+    stacks = getStacks(players)
+    
+    # Player index 0 has better cards -> wins big blind
+    assert stacks[0] > stacks[1]
+    assert (stacks[0] - initStackAmount) == (smallBlindAmount*2)
+    assert (initStackAmount - stacks[1]) == (smallBlindAmount*2)
+    assert (stacks[0] + stacks[1]) == (initStackAmount*2)
 
+
+# %%
+# Check that 
+#   - pot, stacks or bets are not negative
+#   - money is not appearing/disappearing out of the blue
+    
+    
+#np.random.seed(SEED)
+    
+for i in range(1000):
+    
+    print('\nround: ' + str(i))
+    
+    tmpCards = np.random.choice(52, size=9, replace=0)
+    boardCards = tmpCards[:5]
+    holeCards = np.array([tmpCards[5:7],tmpCards[7:]])
+    smallBlindPlayerIdx = np.random.randint(0,high=2)
+    smallBlindAmount = np.random.randint(1,high=2000)
+    stacks = np.array([smallBlindAmount*np.random.randint(2,high=40),
+                       smallBlindAmount*np.random.randint(2,high=40)])
+    board, players, controlVariables, availableActions = initGame(boardCards, smallBlindPlayerIdx, 
+                                                                  smallBlindAmount, stacks, holeCards)
+    while(1):
+        actions = np.zeros(2, dtype=np.int) - 1
+        
+        # If raise is available
+        raiseAmount = getRaiseAmount(availableActions)
+        if(np.any(raiseAmount >= 0)):
+            actions = np.zeros(3, dtype=np.int) - 1
+            actions[2] = np.random.randint(raiseAmount[0],high=raiseAmount[1]+1)
+            
+        actions[0] = 1
+        actions[1] = getCallAmount(availableActions)
+        
+        tmp = np.arange(len(actions))   # Decrease fold probability
+        tmp = np.concatenate((tmp, np.tile(tmp[1:],6)))
+        actionIdx = tmp[np.random.randint(0,high=len(tmp))]
+
+        print(actionIdx)
+        
+        actionToExec = np.zeros(3, dtype=np.int) - 1
+        actionToExec[actionIdx] = actions[actionIdx]
+        
+        board, players, controlVariables, availableActions = executeAction(board, players, controlVariables, 
+                                                                           actionToExec, availableActions)
+        
+#        print(' ')
+#        print(getPot(board))
+#        print(getStacks(players))
+#        print(getBets(players))
+        
+        # Check that not negative        
+        assert np.all(getStacks(players) >= 0)
+        assert np.all(getBets(players) >= 0)
+        assert getPot(board) >= 0
+        
+        if(getGameEndState(controlVariables)==1):
+            print('game end')
+            break
+    
+    
+    
 
 
 

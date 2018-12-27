@@ -62,7 +62,9 @@ def setBoardCardsVisible(boardState, visibleMask):
 
 def getBoardCards(boardState): return boardState[8:]
 
+def getPot(boardState): return boardState[0]
                 
+
 # Actions .....................................................................
 def getAvailableActions(playerState, boardState):
     bets = getBets(playerState)
@@ -198,7 +200,7 @@ def executeAction(board, players, controlVariables, action, availableActions):
     
     # Player folds
     if(actionToExecute == 0):
-        print('* * * * * PLAYER FOLDS * * * * * *')
+#        print('* * * * * PLAYER FOLDS * * * * * *')
         controlVariables, availableActions = setGameEndState(controlVariables, availableActions)
         players, board = moveBetsToPot(players, board)
         players, board = movePotToPlayer(players, secondPlayerIdx, board)
@@ -231,7 +233,7 @@ def executeAction(board, players, controlVariables, action, availableActions):
         
         # Showdown
         if(bettingRound > 3):
-            print('* * * * SHOWDOWN * * * * ')
+#            print('* * * * SHOWDOWN * * * * ')
             cardsBoard = getBoardCards(board)
             
             cardsPlayer0 = np.concatenate((getPlayerHoleCards(players,0), cardsBoard))
@@ -239,7 +241,7 @@ def executeAction(board, players, controlVariables, action, availableActions):
             
             rankPlayer0 = evaluate(cardsPlayer0)
             rankPlayer1 = evaluate(cardsPlayer1)
-
+            
             winPlayerIdx = np.argmin([rankPlayer0[0], rankPlayer1[0]])
                 
             players, board = movePotToPlayer(players, winPlayerIdx, board)
