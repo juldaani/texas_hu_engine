@@ -30,6 +30,8 @@ def getActingPlayerIdx(playerStates): return np.where(playerStates[:,6] != 0)[0]
 
 def getBigBlindPlayerIdx(playerState): return np.argmax(playerState[:,5])
 
+def getSmallBlindPlayerIdx(playerState): return np.argmax(playerState[:,4])
+
 def setHasPlayerActed(playerState, playerIdx):
     playerState[playerIdx,7] = 1
     return playerState
@@ -131,7 +133,7 @@ def initGame(boardCards, smallBlindPlayerIdx, smallBlindAmount, stacks, holeCard
     board[8:] = boardCards          # Board cards
     
     # Set players
-    players = np.zeros((2,9), dtype=np.int)
+    players = np.zeros((2,8), dtype=np.int)
     players[:,:2] = holeCards       # Hole cards
     players[:,2] = stacks           # Stacks
     players[:,3] = 0                # Bets
@@ -140,7 +142,7 @@ def initGame(boardCards, smallBlindPlayerIdx, smallBlindAmount, stacks, holeCard
     players[bigBlindPlayerIdx,5] = 1        # Set big blind for the player
     players = setActingPlayerIdx(players, smallBlindPlayerIdx)  # Small blind acts first on the preflop in heads up
     players[:,7] = 0                # Has player acted?
-    players[:,8] = 0                # Is player all-in?
+#    players[:,8] = 0                # Is player all-in?
     
     # Set game control variables
     controlVariables = np.zeros(2, dtype=np.int)
