@@ -151,7 +151,7 @@ for worseHole, betterHole, boardC in zip(worseHoleCards,betterHoleCards,boardCar
 #     - visible cards X
 #     - player turns X
     
-for i in range(100):
+for i in range(1):
     
     print('\nround: ' + str(i))
     
@@ -218,31 +218,40 @@ for i in range(100):
     assert getBettingRound(controlVariables) == 0
     
     
-    # Call and raise amounts correct
+    # Call amount correct
+    trueCallAmount = np.abs(bets[0]-bets[1])
     callAmount = getCallAmount(availableActions)
-    trueRaiseMax = np.min(stacks) + callAmount
-    trueRaiseMin = 
-    assert callAmount == smallBlindAmount
+    assert trueCallAmount == callAmount
+    assert stacks[smallBlindIdx] - callAmount >= 0      # enough money for call action
     
-    if(trueRaiseMax > callAmount):
-        
-    
-    bets
-    stacks
-    
-    raiseMin = getRaiseAmount(availableActions)[0]
-    trueRaiseMax = smallBlindAmount + smallBlindAmount*2
-    
-    
-    np.min(getStacks(players)
-    getBets(players)
-    
-#    assert raiseMin == trueRaiseMin
+    # Raise amount correct
+    tmpStacks = stacks.copy()
+    tmpStacks[smallBlindPlayerIdx] -= trueCallAmount
+    trueRaiseMax = np.min(tmpStacks) + trueCallAmount
+    trueRaiseMin = min(max(trueCallAmount + smallBlindAmount*2, trueCallAmount*2), trueRaiseMax)
+    assert np.all( (stacks - (trueRaiseMin - trueCallAmount)) >= 0)
+    assert np.all( (stacks - (trueRaiseMax - trueCallAmount)) >= 0)
+    assert np.any( (stacks - (trueRaiseMax - trueCallAmount)) == 0)
 
-#    raiseMax = getRaiseAmount(availableActions)[1]
+    raiseMinMax = getRaiseAmount(availableActions)
+    if(trueRaiseMax == trueCallAmount):
+        assert raiseMinMax[0] == -1
+        assert raiseMinMax[1] == -1
+    else:
+        assert raiseMinMax[0] > trueCallAmount
+        assert raiseMinMax[1] > trueCallAmount
+        assert raiseMinMax[0] <= raiseMinMax[1]
+        assert np.all( (stacks - (raiseMinMax[0] - trueCallAmount)) >= 0)
+        assert np.all( (stacks - (raiseMinMax[1] - trueCallAmount)) >= 0)
+        assert np.any( (stacks - (raiseMinMax[1] - trueCallAmount)) == 0)
+        assert raiseMinMax[0] == trueRaiseMin
+        assert raiseMinMax[1] == trueRaiseMax
+        
+            
     
-    
-    
+    smallBlindIdx    
+    stacks
+    bets    
 
     
 # %%

@@ -56,7 +56,7 @@ def movePotToPlayer(playerState, playerIdx, boardState):
     boardState[0] = 0
     return playerState, boardState
 
-def getBoardCardsVisible(boardState): return board[3:8]
+def getBoardCardsVisible(boardState): return boardState[3:8]
 
 def setBoardCardsVisible(boardState, visibleMask):
     boardState[3:8] = visibleMask
@@ -69,15 +69,20 @@ def getPot(boardState): return boardState[0]
 
 # Actions .....................................................................
 def getAvailableActions(playerState, boardState):
+    actingPlayerIdx = getActingPlayerIdx(playerState)
     bets = getBets(playerState)
-    stacks = getStacks(playerState)
     bigBlindAmount = getBigBlindAmount(boardState)
     callAmount = np.abs(bets[0]-bets[1])
-    maxRaiseAmount = np.min(stacks)
-    raiseMinMax = np.array([min(max(callAmount+bigBlindAmount,callAmount*2), maxRaiseAmount), 
-                            maxRaiseAmount])   # Max raise is all-in
+    tmpStacks = getStacks(playerState).copy()
+    tmpStacks[actingPlayerIdx] -= callAmount
+    raiseMax = np.min(tmpStacks) + callAmount   # Max raise is all-in
+    raiseMin = min(max(callAmount + bigBlindAmount, callAmount*2), raiseMax)
+    raiseMinMax = np.array([raiseMin, raiseMax])
+#    maxRaiseAmount = np.min(stacks)
+#    raiseMinMax = np.array([min(max(callAmount+bigBlindAmount,callAmount*2), maxRaiseAmount), 
+#                            maxRaiseAmount])   # Max raise is all-in
     
-    if(np.max(raiseMinMax) <= callAmount):
+    if(raiseMax == callAmount):
         raiseMinMax[:] = -1
     
     return np.concatenate((np.array([callAmount]),raiseMinMax))
@@ -252,8 +257,8 @@ def executeAction(board, players, controlVariables, action, availableActions):
             return board, players, controlVariables, availableActions
     
     
-    availableActions = getAvailableActions(players, board)
     players = setActingPlayerIdx(players, secondPlayerIdx)
+    availableActions = getAvailableActions(players, board)
 
     return board, players, controlVariables, availableActions
 
