@@ -26,26 +26,20 @@ N_ROUNDS = 1000
 * stacks not negative
 * bets not negative
 * money is not appearing/disappearing out of the blue (pot, stacks, bets)
+* game is initialized correctly
+* preflop start player correct
 
-- game is initialized correctly
-    - blinds
-    - available actions
-    - board
-    - cards
-    - visible cards
-    - 
-    
 
-- money is transferred correctly:
-    - when betting round is finished money is transferred to pot
-    - after raise/call action money is transferred properly to player's bets
-    - valid amount of money is transferred to bets/pot after each action/betting round
+* available actions are correct (raise amount not lower than call amount..)
+* available raise amounts are correct
+* available call amount correct
+- after raise/call action money is transferred properly to player's bets
 
-- available actions are correct (raise amount not lower than call amount..)
-- available raise amounts are correct
-- available call amount correct
 
-- pre/postflop start player correct
+
+- postflop start player correct
+
+
 - if player folds:
     - stacks/pot/bets are transferred correctly
     - gameEndState bit is turned on
@@ -56,6 +50,7 @@ N_ROUNDS = 1000
     - go to next betting round if both players have acted at least once and bets
       are equal
     - visible cards are correct through betting rounds
+    - when betting round is finished money is transferred to pot and bets are set to zero
 - check that game goes to showdown if:
     - all-in
     - river
@@ -142,16 +137,16 @@ for worseHole, betterHole, boardC in zip(worseHoleCards,betterHoleCards,boardCar
 
 # %%
 # Check that the game is initialized correctly
-#     - blinds X
-#     - board X
-#     - players X
+#     - blinds
+#     - board
+#     - players
 #     - available actions
-#     - control variables X
-#     - cards X
-#     - visible cards X
-#     - player turns X
+#     - control variables
+#     - cards
+#     - visible cards
+#     - player turns
     
-for i in range(1):
+for i in range(10000):
     
     print('\nround: ' + str(i))
     
@@ -219,20 +214,21 @@ for i in range(1):
     
     
     # Call amount correct
+    actingPlayerIdx = smallBlindPlayerIdx
     trueCallAmount = np.abs(bets[0]-bets[1])
     callAmount = getCallAmount(availableActions)
     assert trueCallAmount == callAmount
-    assert stacks[smallBlindIdx] - callAmount >= 0      # enough money for call action
+    assert stacks[actingPlayerIdx] - callAmount >= 0      # enough money for call action
     
     # Raise amount correct
     tmpStacks = stacks.copy()
-    tmpStacks[smallBlindPlayerIdx] -= trueCallAmount
+    tmpStacks[actingPlayerIdx] -= trueCallAmount
     trueRaiseMax = np.min(tmpStacks) + trueCallAmount
     trueRaiseMin = min(max(trueCallAmount + smallBlindAmount*2, trueCallAmount*2), trueRaiseMax)
     assert np.all( (stacks - (trueRaiseMin - trueCallAmount)) >= 0)
     assert np.all( (stacks - (trueRaiseMax - trueCallAmount)) >= 0)
-    assert np.any( (stacks - (trueRaiseMax - trueCallAmount)) == 0)
-
+    assert np.any( (stacks - trueRaiseMax) == 0) or \
+        np.any( (stacks - trueRaiseMax) == -trueCallAmount)
     raiseMinMax = getRaiseAmount(availableActions)
     if(trueRaiseMax == trueCallAmount):
         assert raiseMinMax[0] == -1
@@ -243,16 +239,12 @@ for i in range(1):
         assert raiseMinMax[0] <= raiseMinMax[1]
         assert np.all( (stacks - (raiseMinMax[0] - trueCallAmount)) >= 0)
         assert np.all( (stacks - (raiseMinMax[1] - trueCallAmount)) >= 0)
-        assert np.any( (stacks - (raiseMinMax[1] - trueCallAmount)) == 0)
+        assert np.any( (stacks - raiseMinMax[1]) == 0) or \
+            np.any( (stacks - raiseMinMax[1]) == -trueCallAmount)
         assert raiseMinMax[0] == trueRaiseMin
         assert raiseMinMax[1] == trueRaiseMax
         
-            
-    
-    smallBlindIdx    
-    stacks
-    bets    
-
+        
     
 # %%
 # Check that 
@@ -320,14 +312,16 @@ for i in range(10000):
     
     
 # %%
-# Check that
-#   - raise amount not lower than call amount
-#   - available raise and call amounts are correct according to holdem rules
+# Check that:
+#   - available actions are correct (raise amount not lower than call amount etc..)
+#   - available raise amounts are correct
+#   - available call amount correct
+#   - after raise/call action money is transferred properly to certain player's bets
 
 
 np.random.seed(SEED)
     
-for i in range(1):
+for i in range(10000):
     
     print('\nround: ' + str(i))
     
@@ -341,60 +335,62 @@ for i in range(1):
     board, players, controlVariables, availableActions = initGame(boardCards, smallBlindPlayerIdx, 
                                                                   smallBlindAmount, initStacks.copy(), 
                                                                   holeCards)
-    bigBlindAmount = getBigBlindAmount(board)    
-    
-    # Check that blinds are correct
-    
     
     while(1):
+        raiseMinMax = getRaiseAmount(availableActions)
+        callAmount = getCallAmount(availableActions)
+        stacks = getStacks(players)
+        bets = getBets(players)
+
+        # Call amount correct
+        actingPlayerIdx = getActingPlayerIdx(players)
+        trueCallAmount = np.abs(bets[0]-bets[1])
+        callAmount = getCallAmount(availableActions)
+        assert trueCallAmount == callAmount
+        assert stacks[actingPlayerIdx] - callAmount >= 0      # enough money for call action
+        
+        # Raise amount correct
+        tmpStacks = stacks.copy()
+        tmpStacks[actingPlayerIdx] -= trueCallAmount
+        trueRaiseMax = np.min(tmpStacks) + trueCallAmount
+        trueRaiseMin = min(max(trueCallAmount + smallBlindAmount*2, trueCallAmount*2), trueRaiseMax)
+        assert np.all( (stacks - (trueRaiseMin - trueCallAmount)) >= 0)
+        assert np.all( (stacks - (trueRaiseMax - trueCallAmount)) >= 0)
+        assert np.any( (stacks - trueRaiseMax) == 0) or \
+            np.any( (stacks - trueRaiseMax) == -trueCallAmount)
+        if(trueRaiseMax == trueCallAmount):
+            assert raiseMinMax[0] == -1
+            assert raiseMinMax[1] == -1
+        else:
+            assert raiseMinMax[0] > trueCallAmount
+            assert raiseMinMax[1] > trueCallAmount
+            assert raiseMinMax[0] <= raiseMinMax[1]
+            assert np.all( (stacks - (raiseMinMax[0] - trueCallAmount)) >= 0)
+            assert np.all( (stacks - (raiseMinMax[1] - trueCallAmount)) >= 0)
+            assert np.any( (stacks - raiseMinMax[1]) == 0) or \
+                np.any( (stacks - raiseMinMax[1]) == -trueCallAmount)
+            assert raiseMinMax[0] == trueRaiseMin
+            assert raiseMinMax[1] == trueRaiseMax
+        
+        # Pick randomly action to execute
         actions = np.zeros(2, dtype=np.int) - 1
-        
-        # If raise is available
-        raiseAmount = getRaiseAmount(availableActions)
-        if(np.any(raiseAmount >= 0)):
+        if(np.any(raiseMinMax >= 0)):   # If raise is available
             actions = np.zeros(3, dtype=np.int) - 1
-            actions[2] = np.random.randint(raiseAmount[0],high=raiseAmount[1]+1)
-            
+            actions[2] = np.random.randint(raiseMinMax[0],high=raiseMinMax[1]+1)
         actions[0] = 1
-        actions[1] = getCallAmount(availableActions)
-        
+        actions[1] = callAmount
         tmp = np.arange(len(actions))   # Decrease fold probability
         tmp = np.concatenate((tmp, np.tile(tmp[1:],6)))
         actionIdx = tmp[np.random.randint(0,high=len(tmp))]
-
-#        print(actionIdx)
-        
         actionToExec = np.zeros(3, dtype=np.int) - 1
         actionToExec[actionIdx] = actions[actionIdx]
         
         board, players, controlVariables, availableActions = executeAction(board, players, controlVariables, 
                                                                            actionToExec, availableActions)
         
-        raiseAmount = getRaiseAmount(availableActions)
-        callAmount = getCallAmount(availableActions)
+        # TODO: check money balances after the action
         
-        smallBlindAmount
-        getStacks(players)
-        getBets(players)
-        
-        # Calculate correct actions
-        trueCallAmount = getBets(players)
-        
-        
-        bigBlindAmount
-        
-        if((raiseAmount[0] >= 0) and (raiseAmount[1] >= 0)):    # If raise action available
-            # Check that raise amount not lower than call amount
-            assert np.all(raiseAmount >= callAmount)
-            
-            # Check that raise min is lower or equal to raise max
-            assert raiseAmount[0] <= raiseAmount[1]
-        
-            # 
-            
-            
         if(getGameEndState(controlVariables)==1):
-#            print('game end')
             break
 
 
