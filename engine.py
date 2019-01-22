@@ -52,8 +52,15 @@ def moveBetsToPot(playerState, boardState):
     return playerState, boardState
 
 def movePotToPlayer(playerState, playerIdx, boardState):
-    playerState[playerIdx,2] += boardState[0]           # Stacks
-    boardState[0] = 0
+    if(playerIdx == -1):    # If tie
+        halfPot = boardState[0] / 2
+        playerState[0,2] += halfPot     # Stacks
+        playerState[1,2] += halfPot
+        boardState[0] = 0
+    else:
+        playerState[playerIdx,2] += boardState[0]           # Stacks
+        boardState[0] = 0
+        
     return playerState, boardState
 
 def getBoardCardsVisible(boardState): return boardState[3:8]
@@ -78,9 +85,6 @@ def getAvailableActions(playerState, boardState):
     raiseMax = np.min(tmpStacks) + callAmount   # Max raise is all-in
     raiseMin = min(max(callAmount + bigBlindAmount, callAmount*2), raiseMax)
     raiseMinMax = np.array([raiseMin, raiseMax])
-#    maxRaiseAmount = np.min(stacks)
-#    raiseMinMax = np.array([min(max(callAmount+bigBlindAmount,callAmount*2), maxRaiseAmount), 
-#                            maxRaiseAmount])   # Max raise is all-in
     
     if(raiseMax == callAmount):
         raiseMinMax[:] = -1
@@ -93,8 +97,9 @@ def getRaiseAmount(availableActions): return availableActions[1:]
 
 
 # Control variables ...........................................................
-def setGameEndState(controlVariables, availableActions):
-    controlVariables[1] = 1
+def setGameEndState(controlVariables, availableActions, winPlayerIdx):
+    controlVariables[1] = 1                 # Game end state
+    controlVariables[2] = winPlayerIdx      # Winning player index
     availableActions[:] = -1
     return controlVariables, availableActions
 
@@ -106,6 +111,10 @@ def getBettingRound(controlVariables): return controlVariables[0]
 def setBettingRound(controlVariables, bettingRound): 
     controlVariables[0] = bettingRound
     return controlVariables
+
+def getWinningPlayerIdx(controlVariables):
+    return controlVariables[2]
+    
 
 
 # Initializers ................................................................
@@ -150,9 +159,10 @@ def initGame(boardCards, smallBlindPlayerIdx, smallBlindAmount, stacks, holeCard
 #    players[:,8] = 0                # Is player all-in?
     
     # Set game control variables
-    controlVariables = np.zeros(2, dtype=np.int)
+    controlVariables = np.zeros(3, dtype=np.int)
     controlVariables[0] = 0         # Betting round
     controlVariables[1] = 0         # Game end state
+    controlVariables[2] = -100      # Winning player idx, -1 means tie
     
     # Check that both players have enough money
     if(not np.all(getStacks(players) >= getBigBlindAmount(board))):
@@ -208,7 +218,8 @@ def executeAction(board, players, controlVariables, action, availableActions):
     # Player folds
     if(actionToExecute == 0):
 #        print('* * * * * PLAYER FOLDS * * * * * *')
-        controlVariables, availableActions = setGameEndState(controlVariables, availableActions)
+        controlVariables, availableActions = setGameEndState(controlVariables, availableActions, 
+                                                             secondPlayerIdx)
         players, board = moveBetsToPot(players, board)
         players, board = movePotToPlayer(players, secondPlayerIdx, board)
         players = setHasPlayerActed(players, actingPlayerIdx)
@@ -242,7 +253,6 @@ def executeAction(board, players, controlVariables, action, availableActions):
         if(bettingRound > 3):
 #            print('* * * * SHOWDOWN * * * * ')
             cardsBoard = getBoardCards(board)
-            
             cardsPlayer0 = np.concatenate((getPlayerHoleCards(players,0), cardsBoard))
             cardsPlayer1 = np.concatenate((getPlayerHoleCards(players,1), cardsBoard))
             
@@ -250,9 +260,14 @@ def executeAction(board, players, controlVariables, action, availableActions):
             rankPlayer1 = evaluate(cardsPlayer1)
             
             winPlayerIdx = np.argmin([rankPlayer0[0], rankPlayer1[0]])
-                
+            
+            # Tie
+            if(rankPlayer0[0] == rankPlayer1[0]):
+                winPlayerIdx = -1
+            
             players, board = movePotToPlayer(players, winPlayerIdx, board)
-            controlVariables, availableActions = setGameEndState(controlVariables, availableActions)
+            controlVariables, availableActions = setGameEndState(controlVariables, availableActions,
+                                                                 winPlayerIdx)
 
             return board, players, controlVariables, availableActions
     

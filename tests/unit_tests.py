@@ -14,8 +14,9 @@ import numpy as np
 from texas_hu_engine.engine import initGame, executeAction, getCallAmount, getGameEndState, \
     getStacks, getRaiseAmount, getBets, getPot, getBigBlindAmount, getSmallBlindAmount, \
     getSmallBlindPlayerIdx, getBigBlindPlayerIdx, getBoardCards, getBoardCardsVisible, \
-    getPlayerHoleCards, getActingPlayerIdx, getNumPlayersActed, getBettingRound
+    getPlayerHoleCards, getActingPlayerIdx, getNumPlayersActed, getBettingRound, getWinningPlayerIdx
 from hand_eval.params import cardToInt, intToCard
+from hand_eval.evaluator import evaluate
 
 SEED = 123
 N_ROUNDS = 1000
@@ -28,13 +29,10 @@ N_ROUNDS = 1000
 * money is not appearing/disappearing out of the blue (pot, stacks, bets)
 * game is initialized correctly
 * preflop start player correct
-
-
 * available actions are correct (raise amount not lower than call amount..)
 * available raise amounts are correct
 * available call amount correct
-- after raise/call action money is transferred properly to player's bets
-
+* after raise/call action money is transferred properly to player's bets
 
 
 - postflop start player correct
@@ -43,9 +41,12 @@ N_ROUNDS = 1000
 - if player folds:
     - stacks/pot/bets are transferred correctly
     - gameEndState bit is turned on
+    - correct winning player idx
 - if showdown:
     - gameEndState bit is turned on
+    - if tie the pot is splitted
     - stacks/pot/bets are transferred correctly
+    - correct winning player idx
 - betting rounds are handled correctly:
     - go to next betting round if both players have acted at least once and bets
       are equal
@@ -322,8 +323,6 @@ for i in range(10000):
 
 np.random.seed(SEED)
 
-# %%    
-
 for i in range(10000):
     
     print('\nround: ' + str(i))
@@ -388,12 +387,6 @@ for i in range(10000):
         actionToExec = np.zeros(3, dtype=np.int) - 1
         actionToExec[actionIdx] = actions[actionIdx]
         
-        print(actionToExec)
-#        actionToExec = np.array([1,-1,-1])
-#        actionToExec = np.array([-1,-1,raiseMinMax[1]])
-#        actionToExec = np.array([-1,callAmount,-1])
-        
-        
         # Get stacks, bets and pot before the action
         stacksBeforeAction = getStacks(players).copy()
         betsBeforeAction = getBets(players).copy()
@@ -407,13 +400,9 @@ for i in range(10000):
         board, players, controlVariables, availableActions = executeAction(board, players, controlVariables, 
                                                                            actionToExec, availableActions)
         
-#        if(numPlayersActed == 1):
-#            assert 0
-        
         stacksAfterAction = getStacks(players)
         betsAfterAction = getBets(players)
         potAfterAction = getPot(board)
-#        numPlayersActed = getNumPlayersActed(players)
         moneyTotAfterAction = np.sum(stacksAfterAction) + np.sum(betsAfterAction) + potAfterAction
         
         
@@ -422,7 +411,6 @@ for i in range(10000):
         
         # If the fold action was declared
         if(np.argmax(actionToExec) == 0):
-            print('* * * * * Fold * * * * ')
             assert getGameEndState(controlVariables) == 1
             assert np.all(availableActions == -1)
             assert np.all(betsAfterAction == 0)
@@ -432,7 +420,6 @@ for i in range(10000):
             moneyOnTable = np.sum(betsBeforeAction) + potBeforeAction
             assert (stacksBeforeAction[otherPlayerIdx] + moneyOnTable) == stacksAfterAction[otherPlayerIdx]
             assert stacksBeforeAction[actingPlayerIdx] == stacksAfterAction[actingPlayerIdx]
-        
         
         # If call or raise action was declared
         if( np.argmax(actionToExec) == 1 or np.argmax(actionToExec) == 2 ):
@@ -452,27 +439,41 @@ for i in range(10000):
             if(numPlayersActed >= 1 and areBetsEqual):
                 truePotAfterAction = np.sum(betsBeforeAction) + amount + potBeforeAction
                 trueBetsAfterAction = np.array([0,0])
-              
+                
             # If all-in or river showdown (money is transferred to stacks instead of pot or bets)
             isAllInShowdown = areBetsEqual and np.any(trueStacksAfterAction == 0) and (numPlayersActed >= 1)
             isRiverShowdown = areBetsEqual and isRiver and (numPlayersActed >= 1)
             if(isAllInShowdown or isRiverShowdown):
-                print('* * * * * All-in / showdown * * * * ')
                 truePotAfterAction = 0
                 trueBetsAfterAction = np.array([0,0])
                 
-                winningPlayerIdx = np.argmax(stacksAfterAction - stacksBeforeAction)
-                tmpStacks = stacksBeforeAction.copy()
-                tmpStacks[actingPlayerIdx] -= amount
-                moneyOnTable = np.sum(betsBeforeAction) + potBeforeAction + amount
-                trueStacksAfterAction = tmpStacks.copy()
-                trueStacksAfterAction[winningPlayerIdx] += moneyOnTable
+                cardsBoard = getBoardCards(board)
+                cardsPlayer0 = np.concatenate((getPlayerHoleCards(players,0), cardsBoard))
+                cardsPlayer1 = np.concatenate((getPlayerHoleCards(players,1), cardsBoard))
+                rankPlayer0 = evaluate(cardsPlayer0)
+                rankPlayer1 = evaluate(cardsPlayer1)
+                trueWinningPlayerIdx = np.argmin([rankPlayer0[0], rankPlayer1[0]])
+                if(rankPlayer0[0] == rankPlayer1[0]):   # Tie
+                    trueWinningPlayerIdx = -1
+                    tmpStacks = stacksBeforeAction.copy()
+                    tmpStacks[actingPlayerIdx] -= amount
+                    moneyOnTable = np.sum(betsBeforeAction) + potBeforeAction + amount
+                    halfMoney = moneyOnTable / 2
+                    trueStacksAfterAction = tmpStacks.copy()
+                    trueStacksAfterAction[0] += halfMoney
+                    trueStacksAfterAction[1] += halfMoney
+                else:
+                    tmpStacks = stacksBeforeAction.copy()
+                    tmpStacks[actingPlayerIdx] -= amount
+                    moneyOnTable = np.sum(betsBeforeAction) + potBeforeAction + amount
+                    trueStacksAfterAction = tmpStacks.copy()
+                    trueStacksAfterAction[trueWinningPlayerIdx] += moneyOnTable
                 
+                assert getWinningPlayerIdx(controlVariables) == trueWinningPlayerIdx
                 assert getGameEndState(controlVariables) == 1
                 assert np.all(availableActions == -1)
                 assert np.all(betsAfterAction == 0)
                 assert potAfterAction == 0
-                
                 
             assert truePotAfterAction == potAfterAction
             assert np.all(trueBetsAfterAction == betsAfterAction)
@@ -481,6 +482,7 @@ for i in range(10000):
             
         if(getGameEndState(controlVariables)==1):
             break
+        
 
 
 
