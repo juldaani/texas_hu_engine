@@ -33,20 +33,18 @@ N_ROUNDS = 1000
 * available raise amounts are correct
 * available call amount correct
 * after raise/call action money is transferred properly to player's bets
+* if showdown:
+    * gameEndState bit is turned on
+    * if tie the pot is splitted
+    * stacks/pot/bets are transferred correctly
+    * correct winning player idx
+* if player folds:
+    * stacks/pot/bets are transferred correctly
+    * gameEndState bit is turned on
+    * correct winning player idx
 
 
 - postflop start player correct
-
-
-- if player folds:
-    - stacks/pot/bets are transferred correctly
-    - gameEndState bit is turned on
-    - correct winning player idx
-- if showdown:
-    - gameEndState bit is turned on
-    - if tie the pot is splitted
-    - stacks/pot/bets are transferred correctly
-    - correct winning player idx
 - betting rounds are handled correctly:
     - go to next betting round if both players have acted at least once and bets
       are equal
@@ -56,6 +54,9 @@ N_ROUNDS = 1000
 - check that game goes to showdown if:
     - all-in
     - river
+
+
+
 """
 
 
@@ -319,7 +320,15 @@ for i in range(10000):
 #   - available raise amounts are correct
 #   - available call amount correct
 #   - after raise/call action money is transferred properly to certain player's bets
-
+# If showdown:
+#    * gameEndState bit is turned on
+#    * if tie the pot is splitted
+#    * stacks/pot/bets are transferred correctly
+#    * correct winning player idx
+# If player folds:
+#    * stacks/pot/bets are transferred correctly
+#    * gameEndState bit is turned on
+#    * correct winning player idx
 
 np.random.seed(SEED)
 
@@ -415,6 +424,7 @@ for i in range(10000):
             assert np.all(availableActions == -1)
             assert np.all(betsAfterAction == 0)
             assert potAfterAction == 0
+            assert getWinningPlayerIdx(controlVariables) == otherPlayerIdx
             
             # Correct amount transferred to player's stack
             moneyOnTable = np.sum(betsBeforeAction) + potBeforeAction
