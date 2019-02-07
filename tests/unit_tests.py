@@ -120,7 +120,7 @@ for worseHole, betterHole, boardC in zip(worseHoleCards,betterHoleCards,boardCar
     initStackAmount = 100
     stacks = np.array([initStackAmount,initStackAmount])
     board, players, controlVariables, availableActions = initGame(boardC, smallBlindPlayerIdx, 
-                                                                  smallBlindAmount, stacks, holeCards)
+                                                                  smallBlindAmou5nt, stacks, holeCards)
     # Execute call actions only
     while(1):    
         action = np.array([-1,getCallAmount(availableActions),-1])
