@@ -172,7 +172,7 @@ for n,game in enumerate(games):
         originalGameData.append(game)
         
         
-# %%
+
 
 np.save(PATH+'parsed_games', parsedGames)
 np.save(PATH+'original_games', originalGameData)

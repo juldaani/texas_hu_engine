@@ -120,7 +120,7 @@ for worseHole, betterHole, boardC in zip(worseHoleCards,betterHoleCards,boardCar
     initStackAmount = 100
     stacks = np.array([initStackAmount,initStackAmount])
     board, players, controlVariables, availableActions = initGame(boardC, smallBlindPlayerIdx, 
-                                                                  smallBlindAmou5nt, stacks, holeCards)
+                                                                  smallBlindAmount, stacks, holeCards)
     # Execute call actions only
     while(1):    
         action = np.array([-1,getCallAmount(availableActions),-1])
@@ -495,6 +495,152 @@ for i in range(10000):
         
 
 
+# %%
+
+
+
+#def generateRndCards():
+#    tmpCards = np.random.choice(52, size=9, replace=0)
+#    boardCards = tmpCards[:5]
+#    holeCards = np.array([tmpCards[5:7],tmpCards[7:]])
+#    
+#    return boardCards, holeCards
+
+def getGameVariables(game):
+    stacks = game['stacks']
+    playerIds = [playerId for playerId in stacks]
+    stacks = np.array([stacks[playerIds[0]], stacks[playerIds[1]]])
+    
+    blinds = game['blinds']
+    blinds = np.array([blinds[playerIds[0]], blinds[playerIds[1]]])
+    smallBlindPlayerIdx = np.argmin(blinds)
+    smallBlindAmount = blinds[smallBlindPlayerIdx]
+    
+    hashToPlayerIdx = {playerId:i for i,playerId in enumerate(playerIds)}
+    playerIdxToHash = {i:playerId for i,playerId in enumerate(playerIds)}
+    
+    winPlayerIdx = hashToPlayerIdx[game['win_player']]
+    losePlayerIdx = np.abs(1-winPlayerIdx)
+    winAmount = game['win_amount']
+    
+    # Generate cards so that the correct player wins
+    holeCards = np.zeros((2,2), dtype=np.int)
+    holeCards[winPlayerIdx] = [cardToInt['As'], cardToInt['Ah']]
+    holeCards[losePlayerIdx] = [cardToInt['2s'], cardToInt['4h']]
+    boardCards = np.zeros(5, dtype=np.int)
+    boardCards[0], boardCards[1], boardCards[2], boardCards[3], boardCards[4] = \
+        cardToInt['Ac'], cardToInt['Ad'], cardToInt['6s'], cardToInt['8c'], cardToInt['Tc']
+
+    return boardCards, holeCards, smallBlindPlayerIdx, smallBlindAmount, stacks, winPlayerIdx, \
+        winAmount, hashToPlayerIdx, playerIdxToHash
+
+
+games = np.load('/home/juho/dev_folder/texas_hu_engine/tests/hand_histories/10/parsed_games.npy')
+np.random.seed(SEED)
+
+
+# %%
+
+# - Players are acting in correct order
+ 
+i = 1
+game = games[i]
+
+#for game in games:
+#    if(len(game['river']) > 0): break
+
+
+# In 'action' 
+#   1st index is fold
+#   2nd is call amount
+#   3rd is raise amount. 
+# Only one action can be declared, for instance, [-1,-1, 25] means raise 25.
+
+
+states = ['pocket_cards', 'flop', 'turn', 'river']
+
+
+boardCards, holeCards, smallBlindPlayerIdx, smallBlindAmount, initStacks, winPlayerIdx, \
+    winAmount, hashToPlayerIdx, playerIdxToHash = getGameVariables(game)
+board, players, controlVariables, availableActions = initGame(boardCards, smallBlindPlayerIdx, 
+                                                              smallBlindAmount, initStacks.copy(), 
+                                                              holeCards)
+
+
+def getTruePlayerIdx(action, hashToPlayerIdx):
+    playerHash = list(action.keys())[0]
+    return hashToPlayerIdx[playerHash]
+
+def getTrueActionAndAmount(action):
+    actionToNumeric = {'Folds':0, 'Calls':1, 'Checks':1, 'Bets':2, 'Raises':2,
+                       'All-In(Raise)':2, 'All-In':2}
+    
+    act = list(action.values())[0][0]
+    amnt = list(action.values())[0][1]
+    
+    if(act == 'Folds'): amnt = 1
+    
+    return actionToNumeric[act], amnt
+    
+def getActionToExecute(action):
+    
+    
+for state in states:
+    actions = game[state]
+    
+    for action in actions:
+        truePlayerIdx = getTruePlayerIdx(action, hashToPlayerIdx)
+        
+        assert 
+    
+        trueActionIdx, trueActionAmount = getTrueActionAndAmount(action)
+        actionToExec = np.zeros(3, dtype=np.int) - 1
+        actionToExec[actionIdx] = trueActionAmount
+    
+        board, players, controlVariables, availableActions = executeAction(board, players, controlVariables, 
+                                                                           actionToExec, availableActions)
+
+        
+
+
+
+
+
+
+
+
+# %%
+
+
+
+
+
+
+"""
+- check that game goes to showdown if:
+    - all-in
+    - river
+
+- available actions are correct (raise amount not lower than call amount..)
+- available raise amounts are correct
+- available call amount correct
+- after raise/call action money is transferred properly to player's bets
+- if showdown:
+    - stacks/pot/bets are transferred correctly
+    - correct winning player idx
+- if player folds:
+    - stacks/pot/bets are transferred correctly
+    - correct winning player idx
+- betting rounds are handled correctly:
+    - go to next betting round if both players have acted at least once and bets
+      are equal
+    - visible cards are correct through betting rounds
+    - when betting round is finished money is transferred to pot and bets are set to zero
+    - other variables are correct
+
+
+
+"""
 
 
 

@@ -194,8 +194,13 @@ def executeAction(board, players, controlVariables, action, availableActions):
     raiseMinMax = getRaiseAmount(availableActions)
     actingPlayerIdx = getActingPlayerIdx(players)
     stacks = getStacks(players)
-    actionToExecute = np.argmax(action)
     secondPlayerIdx = np.abs(actingPlayerIdx-1)
+    # In 'action' 
+    #   1st index is fold
+    #   2nd is call amount
+    #   3rd is raise amount. 
+    # Only one action can be declared, for instance, [-1,-1, 25] means raise 25.
+    actionToExecute = np.argmax(action)
 
 
     # Check that only one action is declared
