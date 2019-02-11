@@ -542,29 +542,6 @@ np.random.seed(SEED)
 # %%
 
 # - Players are acting in correct order
- 
-i = 1
-game = games[i]
-
-#for game in games:
-#    if(len(game['river']) > 0): break
-
-
-# In 'action' 
-#   1st index is fold
-#   2nd is call amount
-#   3rd is raise amount. 
-# Only one action can be declared, for instance, [-1,-1, 25] means raise 25.
-
-
-states = ['pocket_cards', 'flop', 'turn', 'river']
-
-
-boardCards, holeCards, smallBlindPlayerIdx, smallBlindAmount, initStacks, winPlayerIdx, \
-    winAmount, hashToPlayerIdx, playerIdxToHash = getGameVariables(game)
-board, players, controlVariables, availableActions = initGame(boardCards, smallBlindPlayerIdx, 
-                                                              smallBlindAmount, initStacks.copy(), 
-                                                              holeCards)
 
 
 def getTruePlayerIdx(action, hashToPlayerIdx):
@@ -577,30 +554,52 @@ def getTrueActionAndAmount(action):
     
     act = list(action.values())[0][0]
     amnt = list(action.values())[0][1]
+    cumSum = list(action.values())[0][2]
     
     if(act == 'Folds'): amnt = 1
     
-    return actionToNumeric[act], amnt
+    return actionToNumeric[act], amnt, cumSum
     
 def getActionToExecute(action):
+    # In 'action' 
+#   1st index is fold
+#   2nd is call amount
+#   3rd is raise amount. 
+# Only one action can be declared, for instance, [-1,-1, 25] means raise 25.
     
+    trueActionIdx, trueActionAmount, cumSum = getTrueActionAndAmount(action)
+    actionToExec = np.zeros(3, dtype=np.int) - 1
+    actionToExec[trueActionIdx] = trueActionAmount
     
+    return actionToExec, cumSum
+ 
+    
+i = 19414
+#i = 10
+game = games[i]
+
+
+states = ['pocket_cards', 'flop', 'turn', 'river']
+
+
+boardCards, holeCards, smallBlindPlayerIdx, smallBlindAmount, initStacks, winPlayerIdx, \
+    winAmount, hashToPlayerIdx, playerIdxToHash = getGameVariables(game)
+    
+board, players, controlVariables, availableActions = initGame(boardCards, smallBlindPlayerIdx, 
+                                                              smallBlindAmount, initStacks.copy(), 
+                                                              holeCards)
+
 for state in states:
     actions = game[state]
     
     for action in actions:
         truePlayerIdx = getTruePlayerIdx(action, hashToPlayerIdx)
         
-        assert 
-    
-        trueActionIdx, trueActionAmount = getTrueActionAndAmount(action)
-        actionToExec = np.zeros(3, dtype=np.int) - 1
-        actionToExec[actionIdx] = trueActionAmount
-    
+        assert truePlayerIdx == getActingPlayerIdx(players)
+        
+        actionToExec, cumSum = getActionToExecute(action)
         board, players, controlVariables, availableActions = executeAction(board, players, controlVariables, 
                                                                            actionToExec, availableActions)
-
-        
 
 
 

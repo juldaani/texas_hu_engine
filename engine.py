@@ -244,6 +244,7 @@ def executeAction(board, players, controlVariables, action, availableActions):
     players = setHasPlayerActed(players, actingPlayerIdx)
     numPlayersActed = getNumPlayersActed(players)        
     bets = getBets(players)
+    players = setActingPlayerIdx(players, secondPlayerIdx)
     
     # Check if both players have acted and the bets are equal -> next betting round or showdown
     if( (numPlayersActed >= 2) and (np.sum(np.diff(bets)) == 0) ):
@@ -275,9 +276,8 @@ def executeAction(board, players, controlVariables, action, availableActions):
                                                                  winPlayerIdx)
 
             return board, players, controlVariables, availableActions
+        
     
-    
-    players = setActingPlayerIdx(players, secondPlayerIdx)
     availableActions = getAvailableActions(players, board)
 
     return board, players, controlVariables, availableActions

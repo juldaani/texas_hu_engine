@@ -35,7 +35,7 @@ def parseActions(line):
     split = line.split(' - ')
     playerId = split[0]
 
-    action, amount = -1,-1
+    action, amount = -1, -1
     if('Calls' in split[1]):
         action, amount = split[1].split(' $')
         amount = int(float(amount.replace(',','')) * multiplier)
@@ -137,9 +137,14 @@ for n,game in enumerate(games):
         idx1 = game.find('*** POCKET CARDS ***')
         statesData = game[idx1:]
         
+        # %%
+        
         gameEvents = ['pocket_cards', 'flop', 'turn', 'river', 'show_down', 'summary']
         for stateStr, key in zip(gameStateSearchStrings, gameEvents):
 #            print(stateStr)
+            cumSumBets = 0
+            if(key == 'pocket_cards'):
+                cumSumBets = player1BlindAmount + player2BlindAmount
             
             if(stateStr in statesData):
                 sttr = statesData.split(stateStr)[1]
@@ -152,8 +157,9 @@ for n,game in enumerate(games):
                     if(key == 'pocket_cards' or key == 'flop' or key == 'turn' or key == 'river'):
                         playerId, action, amount = parseActions(line)
                         if(action == -1): continue
-                        gameDict[key].append({playerId:[action,amount]})
-
+                        cumSumBets += amount
+                        gameDict[key].append({playerId:[action,amount,cumSumBets]})
+                        
                     if(key == 'show_down'):
                         if('Collects $' in line):
                             split = line.split(' Collects $')
