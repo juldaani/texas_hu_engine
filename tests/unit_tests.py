@@ -536,6 +536,7 @@ def getGameVariables(game):
 
 
 games = np.load('/home/juho/dev_folder/texas_hu_engine/tests/hand_histories/10/parsed_games.npy')
+orig = np.load('/home/juho/dev_folder/texas_hu_engine/tests/hand_histories/10/original_games.npy')
 np.random.seed(SEED)
 
 
@@ -574,36 +575,42 @@ def getActionToExecute(action):
     return actionToExec, cumSum
  
     
-i = 19414
+#i = 19414
 #i = 10
-game = games[i]
+#game = games[i]
 
 
 states = ['pocket_cards', 'flop', 'turn', 'river']
 
 
-boardCards, holeCards, smallBlindPlayerIdx, smallBlindAmount, initStacks, winPlayerIdx, \
-    winAmount, hashToPlayerIdx, playerIdxToHash = getGameVariables(game)
+for game, origGame in zip(games, orig):
     
-board, players, controlVariables, availableActions = initGame(boardCards, smallBlindPlayerIdx, 
-                                                              smallBlindAmount, initStacks.copy(), 
-                                                              holeCards)
-
-for state in states:
-    actions = game[state]
+    boardCards, holeCards, smallBlindPlayerIdx, smallBlindAmount, initStacks, winPlayerIdx, \
+        winAmount, hashToPlayerIdx, playerIdxToHash = getGameVariables(game)
+        
+    board, players, controlVariables, availableActions = initGame(boardCards, smallBlindPlayerIdx, 
+                                                                  smallBlindAmount, initStacks.copy(), 
+                                                                  holeCards)
     
-    for action in actions:
-        truePlayerIdx = getTruePlayerIdx(action, hashToPlayerIdx)
+    for state in states:
+        actions = game[state]
         
-        assert truePlayerIdx == getActingPlayerIdx(players)
-        
-        actionToExec, cumSum = getActionToExecute(action)
-        board, players, controlVariables, availableActions = executeAction(board, players, controlVariables, 
-                                                                           actionToExec, availableActions)
+        for action in actions:
+            truePlayerIdx = getTruePlayerIdx(action, hashToPlayerIdx)
+            
+            assert truePlayerIdx == getActingPlayerIdx(players)
+            
+            actionToExec, cumSum = getActionToExecute(action)
+            board, players, \
+                controlVariables, availableActions = executeAction(board, players, controlVariables, 
+                                                                   actionToExec, availableActions)
+    
 
+getRaiseAmount(availableActions)
 
+origGame.splitlines()
 
-
+getStacks(players)
 
 
 

@@ -19,8 +19,8 @@ import numpy as np
 def getReturnAmount(lines, lineIdx, playerId):
     returnAmount = 0
     
-    if( (len(lines)-1 >= lineIdx+2) and ('returned' in lines[lineIdx+2]) and not 
-        ('Folds' in lines[lineIdx+1]) ):
+    if( (len(lines)-1 >= lineIdx+2) and ('returned' in lines[lineIdx+2]) and 
+           not ('Folds' in lines[lineIdx+1]) ):
         tmpLine = lines[lineIdx+2]
         tmpSplit = tmpLine.split(' - ')
         tmpPlayerId = tmpSplit[0]
@@ -31,7 +31,7 @@ def getReturnAmount(lines, lineIdx, playerId):
     return returnAmount
 
 
-def parseActions(line):
+def parseActions(line, lines, lineIdx):
     split = line.split(' - ')
     playerId = split[0]
 
@@ -98,12 +98,20 @@ for f in fNames:
     with open (PATH + f, "r") as myfile: data = myfile.read()
     games += data.split('Stage')
 
+# %%
+
 parsedGames, originalGameData = [], []
 for n,game in enumerate(games):
     print(n, len(games))
     
+#    game = origGame     # TODO: remove
+    
     # Only heads up no-limit games & not ante
     if( ('(1 on 1)' in game) & ('No Limit' in game) & ('ante' not in game) ):     
+        
+        if(n>281):assert 0
+        
+        # %%
         
         gameDict = {'pocket_cards':[], 'flop':[], 'turn':[], 'river':[], 
                     'win_player':None, 'win_amount':None}
@@ -137,9 +145,9 @@ for n,game in enumerate(games):
         idx1 = game.find('*** POCKET CARDS ***')
         statesData = game[idx1:]
         
-        # %%
         
         gameEvents = ['pocket_cards', 'flop', 'turn', 'river', 'show_down', 'summary']
+        cumSumPot = 0
         for stateStr, key in zip(gameStateSearchStrings, gameEvents):
 #            print(stateStr)
             cumSumBets = 0
@@ -152,13 +160,17 @@ for n,game in enumerate(games):
                 lines = sttr.splitlines()[1:]
                 
                 for lineIdx in range(len(lines)):
-                    line = lines[lineIdx]                    
+                    line = lines[lineIdx]
                     
                     if(key == 'pocket_cards' or key == 'flop' or key == 'turn' or key == 'river'):
-                        playerId, action, amount = parseActions(line)
+                        
+#                        if(key == 'river'): assert 0    # TODO: remove
+                        
+                        playerId, action, amount = parseActions(line, lines, lineIdx)
                         if(action == -1): continue
                         cumSumBets += amount
-                        gameDict[key].append({playerId:[action,amount,cumSumBets]})
+                        gameDict[key].append({playerId:{'action':[action,amount],
+                                                        'cumSumBets':cumSumBets}})
                         
                     if(key == 'show_down'):
                         if('Collects $' in line):
@@ -173,10 +185,13 @@ for n,game in enumerate(games):
                                                   replace(',','')) * multiplier)
                             gameDict['win_amount'] = winAmount
 #                            print('Win amount: ' + str(winAmount))
+                
+                cumSumPot += cumSumBets
     
         parsedGames.append(gameDict)
         originalGameData.append(game)
-        
+
+# %%        
         
 
 
