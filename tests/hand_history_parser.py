@@ -16,8 +16,11 @@ import os
 import numpy as np
 
 
-def getReturnAmount(lines, lineIdx, playerId):
+def getReturnAmount(lines, lineIdx, playerId, stacks, amount):
     returnAmount = 0
+    
+#    print('\n ---------------------- ')
+#    print(lineIdx, playerId, stacks, amount)
     
     if( (len(lines)-1 >= lineIdx+2) and ('returned' in lines[lineIdx+2]) and 
            not ('Folds' in lines[lineIdx+1]) ):
@@ -27,11 +30,15 @@ def getReturnAmount(lines, lineIdx, playerId):
         assert playerId == tmpPlayerId
         returnAmount = tmpSplit[1].split(' ($')[1].split(')')[0]
         returnAmount = int(float(returnAmount.replace(',','')) * multiplier)
-    
+    elif( (len(lines)-1 >= lineIdx+2) and ('returned' in lines[lineIdx+2]) ):
+        minStack = np.min(np.array(list(stacks.values())))
+        if(amount > minStack):
+            returnAmount = amount - minStack
+        
     return returnAmount
 
 
-def parseActions(line, lines, lineIdx):
+def parseActions(line, lines, lineIdx, stacks):
     split = line.split(' - ')
     playerId = split[0]
 
@@ -43,13 +50,13 @@ def parseActions(line, lines, lineIdx):
     elif('Bets' in split[1]):
         action, amount = split[1].split(' $')
         amount = int(float(amount.replace(',','')) * multiplier)
-        returnAmount = getReturnAmount(lines, lineIdx, playerId)
+        returnAmount = getReturnAmount(lines, lineIdx, playerId, stacks, amount)
         amount -= returnAmount
 #        print(playerId, action,amount)
     elif('Raises' in split[1]):
         action, amount, _ = split[1].split(' $')
         amount = int(float(amount.replace(',','').split(' to')[0]) * multiplier)
-        returnAmount = getReturnAmount(lines, lineIdx, playerId)
+        returnAmount = getReturnAmount(lines, lineIdx, playerId, stacks, amount)
         amount -= returnAmount     
 #        print(playerId, action,amount)
     elif('Checks' in split[1]):
@@ -62,13 +69,13 @@ def parseActions(line, lines, lineIdx):
         _, amount, _ = split[1].split(' $')
         action = 'All-In'
         amount = int(float(amount.replace(',','').split(' to')[0]) * multiplier)
-        returnAmount = getReturnAmount(lines, lineIdx, playerId)
+        returnAmount = getReturnAmount(lines, lineIdx, playerId, stacks, amount)
         amount -= returnAmount     
 #        print(playerId, action,amount)          
     elif('All-In' in split[1]):
         action, amount = split[1].split(' $')
         amount = int(float(amount.replace(',','')) * multiplier)
-        returnAmount = getReturnAmount(lines, lineIdx, playerId)
+        returnAmount = getReturnAmount(lines, lineIdx, playerId, stacks, amount)
         amount -= returnAmount     
 #        print(playerId, action, amount)
     
@@ -109,9 +116,9 @@ for n,game in enumerate(games):
     # Only heads up no-limit games & not ante
     if( ('(1 on 1)' in game) & ('No Limit' in game) & ('ante' not in game) ):     
         
-        if(n>281):assert 0
+#        if(n>281):assert 0
         
-        # %%
+        
         
         gameDict = {'pocket_cards':[], 'flop':[], 'turn':[], 'river':[], 
                     'win_player':None, 'win_amount':None}
@@ -126,7 +133,8 @@ for n,game in enumerate(games):
         player2Stack = int(float(game.split(player2Id)[1].split('($')[1].split(' in ')[0].
                                             replace(',','') ) * multiplier)
         
-        gameDict['stacks'] = {player1Id:player1Stack, player2Id:player2Stack}
+        gameDict['init_stacks'] = {player1Id:player1Stack, player2Id:player2Stack}
+        stacks = {player1Id:player1Stack, player2Id:player2Stack}
         
 #        print('*** STACKS ***')
 #        print(player1Id, player1Stack)
@@ -142,8 +150,13 @@ for n,game in enumerate(games):
 #        print(player1Id, player1BlindAmount)
 #        print(player2Id, player2BlindAmount)
         
+        # Remove blinds from stacks
+        stacks[player1Id] -= player1BlindAmount
+        stacks[player2Id] -= player2BlindAmount
+        
         idx1 = game.find('*** POCKET CARDS ***')
         statesData = game[idx1:]
+        
         
         
         gameEvents = ['pocket_cards', 'flop', 'turn', 'river', 'show_down', 'summary']
@@ -164,13 +177,15 @@ for n,game in enumerate(games):
                     
                     if(key == 'pocket_cards' or key == 'flop' or key == 'turn' or key == 'river'):
                         
-#                        if(key == 'river'): assert 0    # TODO: remove
+#                        assert 0    # TODO: remove
                         
-                        playerId, action, amount = parseActions(line, lines, lineIdx)
+                        playerId, action, amount = parseActions(line, lines, lineIdx, stacks)
                         if(action == -1): continue
+                        stacks[playerId] -= amount
                         cumSumBets += amount
                         gameDict[key].append({playerId:{'action':[action,amount],
-                                                        'cumSumBets':cumSumBets}})
+                                                        'cumSumBets':cumSumBets,
+                                                        'stack':stacks[playerId]}})
                         
                     if(key == 'show_down'):
                         if('Collects $' in line):

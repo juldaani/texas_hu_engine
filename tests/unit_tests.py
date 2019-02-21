@@ -507,7 +507,7 @@ for i in range(10000):
 #    return boardCards, holeCards
 
 def getGameVariables(game):
-    stacks = game['stacks']
+    stacks = game['init_stacks']
     playerIds = [playerId for playerId in stacks]
     stacks = np.array([stacks[playerIds[0]], stacks[playerIds[1]]])
     
@@ -551,11 +551,12 @@ def getTruePlayerIdx(action, hashToPlayerIdx):
 
 def getTrueActionAndAmount(action):
     actionToNumeric = {'Folds':0, 'Calls':1, 'Checks':1, 'Bets':2, 'Raises':2,
-                       'All-In(Raise)':2, 'All-In':2}
+                       'All-In(Raise)':2, 'All-In':1}
     
-    act = list(action.values())[0][0]
-    amnt = list(action.values())[0][1]
-    cumSum = list(action.values())[0][2]
+    tmp = list(action.values())[0]
+    act = tmp['action'][0]
+    amnt = tmp['action'][1]
+    cumSum = tmp['cumSumBets']
     
     if(act == 'Folds'): amnt = 1
     
@@ -607,6 +608,7 @@ for game, origGame in zip(games, orig):
     
 
 getRaiseAmount(availableActions)
+getCallAmount(availableActions)
 
 origGame.splitlines()
 
