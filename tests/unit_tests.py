@@ -550,8 +550,8 @@ def getTruePlayerIdx(action, hashToPlayerIdx):
     return hashToPlayerIdx[playerHash]
 
 def getTrueActionAndAmount(action):
-    actionToNumeric = {'Folds':0, 'Calls':1, 'Checks':1, 'Bets':2, 'Raises':2,
-                       'All-In(Raise)':2, 'All-In':1}
+    actionToNumeric = {'Folds':0, 'Calls':1, 'Checks':1, 'Bets':1, 'Raises':1,
+                       'All-In(Raise)':1, 'All-In':1}
     
     tmp = list(action.values())[0]
     act = tmp['action'][0]
@@ -563,14 +563,13 @@ def getTrueActionAndAmount(action):
     return actionToNumeric[act], amnt, cumSum
     
 def getActionToExecute(action):
-    # In 'action' 
+# In 'action' 
 #   1st index is fold
-#   2nd is call amount
-#   3rd is raise amount. 
-# Only one action can be declared, for instance, [-1,-1, 25] means raise 25.
+#   2nd is call/raise/bet amount
+# Only one action can be declared, for instance, [-1, 25] means raise/call etc. 25.
     
     trueActionIdx, trueActionAmount, cumSum = getTrueActionAndAmount(action)
-    actionToExec = np.zeros(3, dtype=np.int) - 1
+    actionToExec = np.zeros(2, dtype=np.int) - 1
     actionToExec[trueActionIdx] = trueActionAmount
     
     return actionToExec, cumSum
@@ -601,7 +600,7 @@ for game, origGame in zip(games, orig):
             
             assert truePlayerIdx == getActingPlayerIdx(players)
             
-            actionToExec, cumSum = getActionToExecute(action)
+            actionToExec, cumSum = getActionToExecute(action)   #   1st index is fold, 2nd is call/raise amount
             board, players, \
                 controlVariables, availableActions = executeAction(board, players, controlVariables, 
                                                                    actionToExec, availableActions)

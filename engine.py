@@ -197,9 +197,8 @@ def executeAction(board, players, controlVariables, action, availableActions):
     secondPlayerIdx = np.abs(actingPlayerIdx-1)
     # In 'action' 
     #   1st index is fold
-    #   2nd is call amount
-    #   3rd is raise amount. 
-    # Only one action can be declared, for instance, [-1,-1, 25] means raise 25.
+    #   2nd is call/raise/bet amount
+    # Only one action can be declared, for instance, [-1, 25] means raise/call etc. 25.
     actionToExecute = np.argmax(action)
 
 
@@ -208,12 +207,14 @@ def executeAction(board, players, controlVariables, action, availableActions):
         print('ERROR 0')
         return None
     # Check that call and raise amounts are valid
-    if( (action[1] > -1) and (action[1] != callAmount) ):
-        print('ERROR 1')
-        return None
-    if( (action[2] > -1) and ((action[2] < raiseMinMax[0]) or (action[2] > raiseMinMax[1])) ):
-        print('ERROR 2')
-        return None
+    if( (action[1] > -1) ):
+        if( (action[1] != callAmount) and \
+                not (action[1] >= raiseMinMax[0] and action[1] <= raiseMinMax[1]) ):
+            print('ERROR 1')
+            return None
+#    if( (action[2] > -1) and ((action[2] < raiseMinMax[0]) or (action[2] > raiseMinMax[1])) ):
+#        print('ERROR 2')
+#        return None
     # Check that stacks are not negative
     if(np.any(stacks < 0)):
         print('ERROR 3')
