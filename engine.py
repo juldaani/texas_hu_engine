@@ -98,6 +98,7 @@ def getRaiseAmount(availableActions): return availableActions[1:]
 
 # Control variables ...........................................................
 def setGameEndState(controlVariables, availableActions, winPlayerIdx):
+    controlVariables[0] = -1                # Betting round
     controlVariables[1] = 1                 # Game end state
     controlVariables[2] = winPlayerIdx      # Winning player index
     availableActions[:] = -1

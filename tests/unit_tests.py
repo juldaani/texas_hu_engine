@@ -254,7 +254,7 @@ for i in range(10000):
 #   - pot, stacks or bets are not negative
 #   - money is not appearing/disappearing out of the blue
     
-    
+
 np.random.seed(SEED)
     
 for i in range(10000):
@@ -497,15 +497,6 @@ for i in range(10000):
 
 # %%
 
-
-
-#def generateRndCards():
-#    tmpCards = np.random.choice(52, size=9, replace=0)
-#    boardCards = tmpCards[:5]
-#    holeCards = np.array([tmpCards[5:7],tmpCards[7:]])
-#    
-#    return boardCards, holeCards
-
 def getGameVariables(game):
     stacks = game['init_stacks']
     playerIds = [playerId for playerId in stacks]
@@ -535,19 +526,10 @@ def getGameVariables(game):
         winAmount, hashToPlayerIdx, playerIdxToHash
 
 
-games = np.load('/home/juho/dev_folder/texas_hu_engine/tests/hand_histories/10/parsed_games.npy')
-orig = np.load('/home/juho/dev_folder/texas_hu_engine/tests/hand_histories/10/original_games.npy')
-np.random.seed(SEED)
-
-
-# %%
-
-# - Players are acting in correct order
-
-
 def getTruePlayerIdx(action, hashToPlayerIdx):
     playerHash = list(action.keys())[0]
     return hashToPlayerIdx[playerHash]
+
 
 def getTrueActionAndAmount(action):
     actionToNumeric = {'Folds':0, 'Calls':1, 'Checks':1, 'Bets':1, 'Raises':1,
@@ -556,99 +538,191 @@ def getTrueActionAndAmount(action):
     tmp = list(action.values())[0]
     act = tmp['action'][0]
     amnt = tmp['action'][1]
-    cumSum = tmp['cumSumBets']
+    totalBets = tmp['totalBets']
+    totalPot = tmp['totalPot']
+    stack = tmp['stack']
     
     if(act == 'Folds'): amnt = 1
     
-    return actionToNumeric[act], amnt, cumSum
+    return actionToNumeric[act], amnt, totalBets, totalPot, stack
     
+
 def getActionToExecute(action):
-# In 'action' 
-#   1st index is fold
-#   2nd is call/raise/bet amount
-# Only one action can be declared, for instance, [-1, 25] means raise/call etc. 25.
+    # In 'action' 
+    #   1st index is fold
+    #   2nd is call/raise/bet amount
+    # Only one action can be declared, for instance, [-1, 25] means raise/call etc. 25.
     
-    trueActionIdx, trueActionAmount, cumSum = getTrueActionAndAmount(action)
+    trueActionIdx, trueActionAmount, trueTotalBets, trueTotalPot, trueStack = getTrueActionAndAmount(action)
     actionToExec = np.zeros(2, dtype=np.int) - 1
     actionToExec[trueActionIdx] = trueActionAmount
     
-    return actionToExec, cumSum
- 
-    
-#i = 19414
-#i = 10
-#game = games[i]
+    return actionToExec, trueActionAmount, trueTotalBets, trueTotalPot, trueStack
 
+
+games = np.load('/home/juho/dev_folder/texas_hu_engine/tests/hand_histories/10/parsed_games.npy')
+orig = np.load('/home/juho/dev_folder/texas_hu_engine/tests/hand_histories/10/original_games.npy')
 
 states = ['pocket_cards', 'flop', 'turn', 'river']
+np.random.seed(SEED)
 
+
+# %%
+# Test:
+#   - players are acting in the correct order
+#   - the action amount is inside the limits given by the game engine
+#   - stacks are handled correctly
+#   - pot is correct
 
 for game, origGame in zip(games, orig):
-    
-    boardCards, holeCards, smallBlindPlayerIdx, smallBlindAmount, initStacks, winPlayerIdx, \
-        winAmount, hashToPlayerIdx, playerIdxToHash = getGameVariables(game)
+    boardCards, holeCards, smallBlindPlayerIdx, smallBlindAmount, initStacks, trueWinPlayerIdx, \
+        trueWinAmount, hashToPlayerIdx, playerIdxToHash = getGameVariables(game)
+    trueLoserPlayerIdx = np.abs(trueWinPlayerIdx-1)
         
     board, players, controlVariables, availableActions = initGame(boardCards, smallBlindPlayerIdx, 
                                                                   smallBlindAmount, initStacks.copy(), 
                                                                   holeCards)
-    
     for state in states:
         actions = game[state]
         
         for action in actions:
             truePlayerIdx = getTruePlayerIdx(action, hashToPlayerIdx)
+            playerIdx = getActingPlayerIdx(players)
+            otherPlayerIdx = np.abs(truePlayerIdx-1)
+            actionToExec = getActionToExecute(action)   #   1st index is fold, 2nd is call/raise amount
+            actionToExec, amount, trueTotalBets, trueTotalPot, trueStack = \
+                getActionToExecute(action)
+
+            # Limits given by the game engine
+            raiseMinMax = getRaiseAmount(availableActions)
+            callAmount = getCallAmount(availableActions)
             
-            assert truePlayerIdx == getActingPlayerIdx(players)
+            # Test players are acting in the correct order
+            assert truePlayerIdx == playerIdx
             
-            actionToExec, cumSum = getActionToExecute(action)   #   1st index is fold, 2nd is call/raise amount
+            # Test that the action amount is inside the limits given by the game engine 
+            if(actionToExec[1] >= 0):    # If not fold
+                assert (amount == callAmount) or (amount >= raiseMinMax[0] and amount <= raiseMinMax[1])
+            
+            stacksBeforeAction = getStacks(players).copy()
+            
+            # Execute the action
             board, players, \
                 controlVariables, availableActions = executeAction(board, players, controlVariables, 
                                                                    actionToExec, availableActions)
-    
+            
+            stacksAfterAction = getStacks(players).copy()
+            
+            # Skip if the game has ended because after finishing the game the pot and stacks behave 
+            # differently (winning player's stack is increased and losing player's decreased...)
+            if(getGameEndState(controlVariables) != 1):     
+                # Test that stacks are handled correctly
+                assert stacksBeforeAction[truePlayerIdx]-amount == stacksAfterAction[truePlayerIdx]
+                assert stacksBeforeAction[otherPlayerIdx] == stacksAfterAction[otherPlayerIdx]
+                assert getStacks(players)[playerIdx] == trueStack
+                
+                # Test pot correct
+                assert np.sum(getBets(players))+getPot(board) == trueTotalPot
+                
+            
+            
+#            elif(getGameEndState(controlVariables) == 1):   # The game has ended
+#                assert getWinningPlayerIdx(controlVariables) == trueWinPlayerIdx
+#                assert initStacks[trueWinPlayerIdx]+trueWinAmount == stacksAfterAction[trueWinPlayerIdx]
+#                assert initStacks[trueLoserPlayerIdx]-trueWinAmount == stacksAfterAction[trueLoserPlayerIdx]
+                    
+                    
 
-getRaiseAmount(availableActions)
-getCallAmount(availableActions)
+# %%
+# Test betting rounds are handled correctly:
+#    - betting rounds produced by the engine are equal to the betting rounds in the test data
+#    * correct visible cards during the betting rounds
+#    - when betting round is finished money is transferred into pot and bets are set to zero
+#    - other variables are correct
+#    - after raise/call action money is transferred properly to player's bets
 
-origGame.splitlines()
 
-getStacks(players)
+tmpVisibleCards = [np.array([0,0,0,0,0]), np.array([1,1,1,0,0]), np.array([1,1,1,1,0]), 
+                   np.array([1,1,1,1,1])]
+trueVisibleCards = {state:i for state,i in zip(states,tmpVisibleCards)}
+trueBettingRoundNumber = {state:i for state,i in zip(states,[0,1,2,3])}
+
+for game, origGame in zip(games, orig):
+    boardCards, holeCards, smallBlindPlayerIdx, smallBlindAmount, initStacks, trueWinPlayerIdx, \
+        trueWinAmount, hashToPlayerIdx, playerIdxToHash = getGameVariables(game)
+    trueLoserPlayerIdx = np.abs(trueWinPlayerIdx-1)
+        
+    board, players, controlVariables, availableActions = initGame(boardCards, smallBlindPlayerIdx, 
+                                                                  smallBlindAmount, initStacks.copy(), 
+                                                                  holeCards)
+    for state in states:
+        actions = game[state]
+        trueCards = trueVisibleCards[state]
+        trueBettingRound = trueBettingRoundNumber[state]
+        
+        for action in actions:
+            truePlayerIdx = getTruePlayerIdx(action, hashToPlayerIdx)
+            playerIdx = getActingPlayerIdx(players)
+            otherPlayerIdx = np.abs(truePlayerIdx-1)
+            actionToExec = getActionToExecute(action)   #   1st index is fold, 2nd is call/raise amount
+            actionToExec, amount, trueTotalBets, trueTotalPot, trueStack = \
+                getActionToExecute(action)
+
+#             Limits given by the game engine
+#            raiseMinMax = getRaiseAmount(availableActions)
+#            callAmount = getCallAmount(availableActions)
+            
+            # Correct visible cards
+            assert np.all(trueCards == getBoardCardsVisible(board))
+            
+            # Correct betting round number
+            if(getGameEndState(controlVariables) != 1):     # if the game hasn't yet ended
+                assert trueBettingRound == getBettingRound(controlVariables)
+            
+            # Execute the action
+            board, players, \
+                controlVariables, availableActions = executeAction(board, players, controlVariables, 
+                                                                   actionToExec, availableActions)
 
 
-
+                            
+            
 
 # %%
 
-
-
+np.save('orig', origGame)
+np.save('parsed', game)
 
 
 
 """
-- check that game goes to showdown if:
-    - all-in
-    - river
+* Test players are acting in correct order
+* Test that the action amount is inside the limits given by the game engine 
 
-- available actions are correct (raise amount not lower than call amount..)
-- available raise amounts are correct
-- available call amount correct
-- after raise/call action money is transferred properly to player's bets
-- if showdown:
-    - stacks/pot/bets are transferred correctly
-    - correct winning player idx
-- if player folds:
-    - stacks/pot/bets are transferred correctly
-    - correct winning player idx
+
 - betting rounds are handled correctly:
     - go to next betting round if both players have acted at least once and bets
       are equal
     - visible cards are correct through betting rounds
     - when betting round is finished money is transferred to pot and bets are set to zero
     - other variables are correct
+    - after raise/call action money is transferred properly to player's bets
 
+
+- check that game goes to showdown if:
+    - all-in
+    - river
+- if showdown:
+    - stacks/pot/bets are transferred correctly
+    - correct winning player idx
+    - stacks are correct (money in winner's stack has increased)
+- if player folds:
+    - stacks/pot/bets are transferred correctly
+    - correct winning player idx
+    - stacks are correct (money in winner's stack has increased)
 
 
 """
-
 
 
 
