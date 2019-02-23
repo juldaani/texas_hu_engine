@@ -3,6 +3,8 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+hand_histories/
+
 # C extensions
 *.so
 

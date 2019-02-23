@@ -4,7 +4,15 @@
 Created on Sat Feb 23 21:08:35 2019
 
 @author: juho
+
+These are tests based on hand history data downloaded from: 
+    http://web.archive.org/web/20110205042259/http://www.outflopped.com/questions/286/
+    obfuscated-datamined-hand-histories
+    
+In order to run these tests, the data must be first parsed with 'hand_history_parser.py'.
+
 """
+
 
 import numpy as np
 
@@ -31,7 +39,13 @@ def getGameVariables(game):
     
     winPlayerIdx = hashToPlayerIdx[game['win_player']]
     losePlayerIdx = np.abs(1-winPlayerIdx)
-    winAmount = game['win_amount']
+    losePlayerHash = playerIdxToHash[losePlayerIdx]
+    
+    actionsList = game['pocket_cards'] + game['flop'] + game['turn'] + game['river']
+    for action in actionsList:
+        if(losePlayerHash in action):
+            loserPlayerFinalStack = action[losePlayerHash]['stack']
+    winAmount = game['init_stacks'][losePlayerHash] - loserPlayerFinalStack
     
     # Generate cards so that the correct player wins
     holeCards = np.zeros((2,2), dtype=np.int)
@@ -169,7 +183,6 @@ tmpVisibleCards = [np.array([0,0,0,0,0]), np.array([1,1,1,0,0]), np.array([1,1,1
 trueVisibleCards = {state:i for state,i in zip(states,tmpVisibleCards)}
 trueBettingRoundNumber = {state:i for state,i in zip(states,[0,1,2,3])}
 
-
 for game, origGame in zip(games, orig):
     boardCards, holeCards, smallBlindPlayerIdx, smallBlindAmount, initStacks, trueWinPlayerIdx, \
         trueWinAmount, hashToPlayerIdx, playerIdxToHash = getGameVariables(game)
@@ -214,7 +227,70 @@ for game, origGame in zip(games, orig):
         if(getGameEndState(controlVariables) != 1):     # if the game hasn't yet ended
             assert getPot(board) == trueTotalPot
         
+
+# %%
+# Showdown tests:
+#   * game ends in showdown
+#   * correct winning player idx
+#   * stacks are correct (money in winner's stack has increased by correct amount...)
+# Tests when player folds:
+#    - stacks/pot/bets are transferred correctly
+#    - correct winning player idx
+#    - stacks are correct (money in winner's stack has increased)
+
+for game, origGame in zip(games, orig):
+    boardCards, holeCards, smallBlindPlayerIdx, smallBlindAmount, initStacks, trueWinPlayerIdx, \
+    trueWinAmount, hashToPlayerIdx, playerIdxToHash = getGameVariables(game)
         
+    board, players, controlVariables, availableActions = initGame(boardCards, smallBlindPlayerIdx, 
+                                                                  smallBlindAmount, initStacks.copy(), 
+                                                                  holeCards)
+    for state in states:
+        actions = game[state]
+        
+        nActions = len(actions)
+        isAllIn = False
+        for i,action in enumerate(actions):
+            truePlayerIdx = getTruePlayerIdx(action, hashToPlayerIdx)
+            playerIdx = getActingPlayerIdx(players)
+            
+            actionToExec, amount, trueTotalBets, trueTotalPot, trueStack, trueBets = \
+                getActionToExecute(action)
+                
+            tmpAction = list(action.values())[0]['action'][0]
+            isAllIn = tmpAction == 'All-In(Raise)' or tmpAction == 'All-In'
+            
+            # Execute the action
+            board, players, \
+                controlVariables, availableActions = executeAction(board, players, controlVariables, 
+                                                                   actionToExec, availableActions)
+            
+            isRiverShowdown = (state == 'river') and (i == nActions-1) and (tmpAction != 'Folds')
+            isAllInShowdown = (i == nActions-1) and (tmpAction != 'Folds') and isAllIn
+
+            if(isRiverShowdown or isAllInShowdown):
+                winPlayerIdx = getWinningPlayerIdx(controlVariables)
+                losePlayerIdx = np.abs(1-winPlayerIdx)
+
+                # The game ends when showdown
+                assert getGameEndState(controlVariables) == 1
+            
+                # Correct winning player
+                assert trueWinPlayerIdx == winPlayerIdx
+                
+                # Stacks are correct
+                stacks = getStacks(players)
+                winAmount = stacks[winPlayerIdx] - initStacks[winPlayerIdx]
+                assert trueWinAmount == winAmount
+                assert stacks[winPlayerIdx] > initStacks[winPlayerIdx]
+                assert stacks[losePlayerIdx] < initStacks[losePlayerIdx]
+                assert stacks[winPlayerIdx] == initStacks[winPlayerIdx] + trueWinAmount
+                assert stacks[losePlayerIdx] == initStacks[losePlayerIdx] - trueWinAmount
+                
+                # Pot and bets are zero
+                assert getPot(board) == 0
+                assert np.all(getBets(players) == [0,0])
+                
         
 # %%
 
@@ -233,15 +309,16 @@ np.save('parsed', game)
     * when betting round is finished money is transferred to pot and bets are set to zero
     * other variables are correct
     * after raise/call action money is transferred properly to player's bets
+* check that game goes to showdown if:
+    * all-in
+    * river
 
-
-- check that game goes to showdown if:
-    - all-in
-    - river
-- if showdown:
-    - stacks/pot/bets are transferred correctly
-    - correct winning player idx
-    - stacks are correct (money in winner's stack has increased)
+* if showdown:
+    * stacks/pot/bets are transferred correctly
+    * correct winning player idx
+    * stacks are correct (money in winner's stack has increased)
+    
+    
 - if player folds:
     - stacks/pot/bets are transferred correctly
     - correct winning player idx

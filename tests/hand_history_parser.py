@@ -133,8 +133,6 @@ gameEvents = ['pocket_cards', 'flop', 'turn', 'river', 'show_down', 'summary']
 for n,game in enumerate(games):
 #    print(n, len(games))
     
-#    game = origGame     # TODO: remove
-    
     # Only heads up no-limit games & not ante
     if( ('(1 on 1)' in game) & ('No Limit' in game) & ('ante' not in game) ):     
         
@@ -156,20 +154,12 @@ for n,game in enumerate(games):
         gameDict['init_stacks'] = {player1Id:player1Stack, player2Id:player2Stack}
         stacks = {player1Id:player1Stack, player2Id:player2Stack}
         
-#        print('*** STACKS ***')
-#        print(player1Id, player1Stack)
-#        print(player2Id, player2Stack)
-    
         # Blind amounts
         player1BlindAmount = parseBlind(game, player1Id, multiplier)
         player2BlindAmount = parseBlind(game, player2Id, multiplier)
         
         gameDict['blinds'] = {player1Id:player1BlindAmount, player2Id:player2BlindAmount}
 
-#        print('*** BLINDS ***')
-#        print(player1Id, player1BlindAmount)
-#        print(player2Id, player2BlindAmount)
-        
         # Remove blinds from stacks
         stacks[player1Id] -= player1BlindAmount
         stacks[player2Id] -= player2BlindAmount
@@ -179,6 +169,10 @@ for n,game in enumerate(games):
         
         totalPot = 0
         for stateStr, key in zip(gameStateSearchStrings, gameEvents):
+            
+            if(not stateStr in statesData):
+                continue
+            
             totalBets = 0
             bets = {player1Id:0, player2Id:0}
             
@@ -187,48 +181,59 @@ for n,game in enumerate(games):
                 bets[player1Id] = player1BlindAmount
                 bets[player2Id] = player2BlindAmount
             
-            if(stateStr in statesData):
-                sttr = statesData.split(stateStr)[1]
-                sttr = sttr[:sttr.find('***')]
-                lines = sttr.splitlines()[1:]
+            sttr = statesData.split(stateStr)[1]
+            sttr = sttr[:sttr.find('***')]
+            lines = sttr.splitlines()[1:]
+            
+            for lineIdx in range(len(lines)):
+                line = lines[lineIdx]
                 
-                for lineIdx in range(len(lines)):
-                    line = lines[lineIdx]
+                if(key == 'pocket_cards' or key == 'flop' or key == 'turn' or key == 'river'):
+                    playerId, action, amount = parseActions(line, lines, lineIdx, gameDict, stacks)
                     
-                    if(key == 'pocket_cards' or key == 'flop' or key == 'turn' or key == 'river'):
-                        playerId, action, amount = parseActions(line, lines, lineIdx, gameDict, stacks)
-                        
-                        if(action == -1): 
-                            continue
-                        
-                        stacks[playerId] -= amount
-                        bets[playerId] += amount
-                        totalBets += amount
-                        gameDict[key].append({playerId:{'action':[action,amount],
-                                                        'totalBets':totalBets,
-                                                        'totalPot':totalPot + totalBets,
-                                                        'stack':stacks[playerId],
-                                                        'bets':bets[playerId]}})
-                        
-                    if(key == 'show_down'):
-                        if('Collects $' in line):
-                            split = line.split(' Collects $')
-                            winPlayerId = split[0]
-                            gameDict['win_player'] = winPlayerId
+                    if(action == -1): 
+                        continue
+                    
+                    stacks[playerId] -= amount
+                    bets[playerId] += amount
+                    totalBets += amount
+                    gameDict[key].append({playerId:{'action':[action,amount],
+                                                    'totalBets':totalBets,
+                                                    'totalPot':totalPot + totalBets,
+                                                    'stack':stacks[playerId],
+                                                    'bets':bets[playerId]}})
+                    
+                if(key == 'show_down'):
+                    if('Collects $' in line):
+                        split = line.split(' Collects $')
+                        winPlayerId = split[0]
+                        gameDict['win_player'] = winPlayerId
 #                            print('Win player: ' + winPlayerId)
 
-                    if(key == 'summary'):
-                        if('Total Pot($' in line):
-                            winAmount = round(float(line.split('Total Pot($')[1].split(')')[0].
-                                                  replace(',','')) * multiplier)
-                            gameDict['win_amount'] = winAmount #- \
-#                            print('Win amount: ' + str(winAmount))
+#                if(key == 'summary'):
+#                    if('Total Pot($' in line):
+#                        winAmount = round(float(line.split('Total Pot($')[1].split(')')[0].
+#                                              replace(',','')) * multiplier)
+#                        gameDict['win_amount'] = winAmount
+#                       print('Win amount: ' + str(winAmount))
                                 
+            totalPot += totalBets
                 
-                totalPot += totalBets
+                
     
         parsedGames.append(gameDict)
         originalGameData.append(game)
+
+
+#game.splitlines()
+#
+#*** POCKET CARDS *** 15000
+#*** POCKET CARDS *** 40000
+#*** POCKET CARDS *** 100000
+#*** FLOP *** 100000
+#*** FLOP *** 140000
+#*** FLOP *** 180000
+
 
 # %%        
         
