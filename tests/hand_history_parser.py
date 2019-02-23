@@ -5,9 +5,14 @@ Created on Sat Feb  2 13:47:38 2019
 
 @author: juho
 
-Parser for hand histories downloaded from:
-http://web.archive.org/web/20110205042259/http://www.outflopped.com/questions/286/
-obfuscated-datamined-hand-histories
+Hand histories to be parsed can be downloaded from:
+    https://drive.google.com/open?id=1jIvFuoJAus2_Z5mhRO5SDIFuyr0Mt7se
+
+Data is also available on (ABS-2009-07-01_2009-07-23...):
+    http://web.archive.org/web/20110205042259/http://www.outflopped.com/questions/286/
+    obfuscated-datamined-hand-histories
+    
+Parsed data is used in 'tests_based_real_data.py'.
 
 """
 
