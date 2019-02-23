@@ -129,6 +129,7 @@ for f in fNames:
 # %%
 
 parsedGames, originalGameData = [], []
+gameEvents = ['pocket_cards', 'flop', 'turn', 'river', 'show_down', 'summary']
 for n,game in enumerate(games):
 #    print(n, len(games))
     
@@ -176,15 +177,15 @@ for n,game in enumerate(games):
         idx1 = game.find('*** POCKET CARDS ***')
         statesData = game[idx1:]
         
-        
-        
-        gameEvents = ['pocket_cards', 'flop', 'turn', 'river', 'show_down', 'summary']
         totalPot = 0
         for stateStr, key in zip(gameStateSearchStrings, gameEvents):
-#            print(stateStr)
             totalBets = 0
+            bets = {player1Id:0, player2Id:0}
+            
             if(key == 'pocket_cards'):
                 totalBets = player1BlindAmount + player2BlindAmount
+                bets[player1Id] = player1BlindAmount
+                bets[player2Id] = player2BlindAmount
             
             if(stateStr in statesData):
                 sttr = statesData.split(stateStr)[1]
@@ -195,17 +196,19 @@ for n,game in enumerate(games):
                     line = lines[lineIdx]
                     
                     if(key == 'pocket_cards' or key == 'flop' or key == 'turn' or key == 'river'):
-                        
-#                        assert 0    # TODO: remove
-                        
                         playerId, action, amount = parseActions(line, lines, lineIdx, gameDict, stacks)
-                        if(action == -1): continue
+                        
+                        if(action == -1): 
+                            continue
+                        
                         stacks[playerId] -= amount
+                        bets[playerId] += amount
                         totalBets += amount
                         gameDict[key].append({playerId:{'action':[action,amount],
                                                         'totalBets':totalBets,
                                                         'totalPot':totalPot + totalBets,
-                                                        'stack':stacks[playerId]}})
+                                                        'stack':stacks[playerId],
+                                                        'bets':bets[playerId]}})
                         
                     if(key == 'show_down'):
                         if('Collects $' in line):
@@ -219,7 +222,6 @@ for n,game in enumerate(games):
                             winAmount = round(float(line.split('Total Pot($')[1].split(')')[0].
                                                   replace(',','')) * multiplier)
                             gameDict['win_amount'] = winAmount #- \
-                                #(gameDict['init_stacks'][winPlayerId] - stacks[winPlayerId])
 #                            print('Win amount: ' + str(winAmount))
                                 
                 
