@@ -18,45 +18,7 @@ from hand_eval.params import cardToInt, intToCard
 from hand_eval.evaluator import evaluate
 
 SEED = 123
-N_ROUNDS = 1000
-
-"""
-* evaluate cards correctly
-* pot not negative
-* stacks not negative
-* bets not negative
-* money is not appearing/disappearing out of the blue (pot, stacks, bets)
-* game is initialized correctly
-* preflop start player correct
-* available actions are correct (raise amount not lower than call amount..)
-* available raise amounts are correct
-* available call amount correct
-* after raise/call action money is transferred properly to player's bets
-* if showdown:
-    * gameEndState bit is turned on
-    * if tie the pot is splitted
-    * stacks/pot/bets are transferred correctly
-    * correct winning player idx
-* if player folds:
-    * stacks/pot/bets are transferred correctly
-    * gameEndState bit is turned on
-    * correct winning player idx
-
-
-- postflop start player correct
-- betting rounds are handled correctly:
-    - go to next betting round if both players have acted at least once and bets
-      are equal
-    - visible cards are correct through betting rounds
-    - when betting round is finished money is transferred to pot and bets are set to zero
-    - other variables are correct
-- check that game goes to showdown if:
-    - all-in
-    - river
-
-
-
-"""
+N_ROUNDS = 50000
 
 
 # %%
@@ -148,9 +110,8 @@ for worseHole, betterHole, boardC in zip(worseHoleCards,betterHoleCards,boardCar
 #     - visible cards
 #     - player turns
     
-for i in range(10000):
-    
-    print('\nround: ' + str(i))
+for i in range(N_ROUNDS):
+    if(i % 1000 == 0): print(i, N_ROUNDS)
     
     tmpCards = np.random.choice(52, size=9, replace=0)
     boardCards = tmpCards[:5]
@@ -256,9 +217,8 @@ for i in range(10000):
 
 np.random.seed(SEED)
     
-for i in range(10000):
-    
-    print('\nround: ' + str(i))
+for i in range(N_ROUNDS):
+    if(i % 1000 == 0): print(i, N_ROUNDS)
     
     tmpCards = np.random.choice(52, size=9, replace=0)
     boardCards = tmpCards[:5]
@@ -331,9 +291,8 @@ for i in range(10000):
 
 np.random.seed(SEED)
 
-for i in range(10000):
-    
-    print('\nround: ' + str(i))
+for i in range(N_ROUNDS):
+    if(i % 1000 == 0): print(i, N_ROUNDS)
     
     tmpCards = np.random.choice(52, size=9, replace=0)
     boardCards = tmpCards[:5]

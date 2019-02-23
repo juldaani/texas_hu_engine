@@ -96,9 +96,10 @@ def getActionToExecute(action):
 
 
 
+path = '/home/juho/dev_folder/texas_hu_engine/tests/hand_histories/0.5/'
 
-games = np.load('/home/juho/dev_folder/texas_hu_engine/tests/hand_histories/10/parsed_games.npy')
-orig = np.load('/home/juho/dev_folder/texas_hu_engine/tests/hand_histories/10/original_games.npy')
+games = np.load(path + 'parsed_games.npy')
+orig = np.load(path + 'original_games.npy')
 
 SEED = 123
 states = ['pocket_cards', 'flop', 'turn', 'river']
@@ -113,7 +114,9 @@ np.random.seed(SEED)
 #   - stacks are handled correctly
 #   - pot is correct
 
-for game, origGame in zip(games, orig):
+for game, origGame, i in zip(games, orig, np.arange(len(games))):
+    if(i % 1000 == 0): print(i, len(games))
+    
     boardCards, holeCards, smallBlindPlayerIdx, smallBlindAmount, initStacks, trueWinPlayerIdx, \
         trueWinAmount, hashToPlayerIdx, playerIdxToHash = getGameVariables(game)
     trueLoserPlayerIdx = np.abs(trueWinPlayerIdx-1)
@@ -161,13 +164,6 @@ for game, origGame in zip(games, orig):
                 
                 # Test pot correct
                 assert np.sum(getBets(players))+getPot(board) == trueTotalPot
-                
-            
-            
-#            elif(getGameEndState(controlVariables) == 1):   # The game has ended
-#                assert getWinningPlayerIdx(controlVariables) == trueWinPlayerIdx
-#                assert initStacks[trueWinPlayerIdx]+trueWinAmount == stacksAfterAction[trueWinPlayerIdx]
-#                assert initStacks[trueLoserPlayerIdx]-trueWinAmount == stacksAfterAction[trueLoserPlayerIdx]
                     
 
 # %%
@@ -183,7 +179,9 @@ tmpVisibleCards = [np.array([0,0,0,0,0]), np.array([1,1,1,0,0]), np.array([1,1,1
 trueVisibleCards = {state:i for state,i in zip(states,tmpVisibleCards)}
 trueBettingRoundNumber = {state:i for state,i in zip(states,[0,1,2,3])}
 
-for game, origGame in zip(games, orig):
+for game, origGame, i in zip(games, orig, np.arange(len(games))):
+    if(i % 1000 == 0): print(i, len(games))
+    
     boardCards, holeCards, smallBlindPlayerIdx, smallBlindAmount, initStacks, trueWinPlayerIdx, \
         trueWinAmount, hashToPlayerIdx, playerIdxToHash = getGameVariables(game)
     trueLoserPlayerIdx = np.abs(trueWinPlayerIdx-1)
@@ -229,16 +227,14 @@ for game, origGame in zip(games, orig):
         
 
 # %%
-# Showdown tests:
-#   * game ends in showdown
+# Tests when player folds or the game goes to showdown:
+#   * game ends
 #   * correct winning player idx
 #   * stacks are correct (money in winner's stack has increased by correct amount...)
-# Tests when player folds:
-#    - stacks/pot/bets are transferred correctly
-#    - correct winning player idx
-#    - stacks are correct (money in winner's stack has increased)
 
-for game, origGame in zip(games, orig):
+for game, origGame, i in zip(games, orig, np.arange(len(games))):
+    if(i % 1000 == 0): print(i, len(games))
+    
     boardCards, holeCards, smallBlindPlayerIdx, smallBlindAmount, initStacks, trueWinPlayerIdx, \
     trueWinAmount, hashToPlayerIdx, playerIdxToHash = getGameVariables(game)
         
@@ -259,6 +255,7 @@ for game, origGame in zip(games, orig):
                 
             tmpAction = list(action.values())[0]['action'][0]
             isAllIn = tmpAction == 'All-In(Raise)' or tmpAction == 'All-In'
+            isFold = tmpAction == 'Folds'
             
             # Execute the action
             board, players, \
@@ -268,11 +265,11 @@ for game, origGame in zip(games, orig):
             isRiverShowdown = (state == 'river') and (i == nActions-1) and (tmpAction != 'Folds')
             isAllInShowdown = (i == nActions-1) and (tmpAction != 'Folds') and isAllIn
 
-            if(isRiverShowdown or isAllInShowdown):
+            if(isRiverShowdown or isAllInShowdown or isFold):
                 winPlayerIdx = getWinningPlayerIdx(controlVariables)
                 losePlayerIdx = np.abs(1-winPlayerIdx)
 
-                # The game ends when showdown
+                # The game ends when showdown / fold
                 assert getGameEndState(controlVariables) == 1
             
                 # Correct winning player
@@ -291,44 +288,6 @@ for game, origGame in zip(games, orig):
                 assert getPot(board) == 0
                 assert np.all(getBets(players) == [0,0])
                 
-        
-# %%
-
-np.save('orig', origGame)
-np.save('parsed', game)
-
-
-
-"""
-* Test players are acting in correct order
-* Test that the action amount is inside the limits given by the game engine 
-* betting rounds are handled correctly:
-    * go to next betting round if both players have acted at least once and bets
-      are equal
-    * visible cards are correct through betting rounds
-    * when betting round is finished money is transferred to pot and bets are set to zero
-    * other variables are correct
-    * after raise/call action money is transferred properly to player's bets
-* check that game goes to showdown if:
-    * all-in
-    * river
-
-* if showdown:
-    * stacks/pot/bets are transferred correctly
-    * correct winning player idx
-    * stacks are correct (money in winner's stack has increased)
-    
-    
-- if player folds:
-    - stacks/pot/bets are transferred correctly
-    - correct winning player idx
-    - stacks are correct (money in winner's stack has increased)
-
-
-"""
-
-
-
 
 
 

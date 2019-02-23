@@ -19,21 +19,6 @@ import numpy as np
 def getReturnAmount(lines, lineIdx, playerId, amount, gameDict, stacks):
     returnAmount = 0
     
-#    print('\n ---------------------- ')
-#    print(lineIdx, playerId, stacks, amount)
-#    print(' ')
-#    print(lines)
-#    print(' ')
-#    print(gameDict)
-#    
-#    lineIdx = 0
-#    playerId = 'JJnyL2vrvzAOyNLMMb6gHw'
-#    stacks = {'FL4lGd0uLGmUjgC6CYjapQ': 658750, 'JJnyL2vrvzAOyNLMMb6gHw': 1377750}
-#    amount = 1370000
-#    lines = ['JJnyL2vrvzAOyNLMMb6gHw - Bets $1,370', 'FL4lGd0uLGmUjgC6CYjapQ - Folds', 'JJnyL2vrvzAOyNLMMb6gHw - returned ($1,370) : not called'] 
-#    gameDict = {'pocket_cards': [{'FL4lGd0uLGmUjgC6CYjapQ': {'action': ['Calls', 5000], 'totalBets': 20000, 'totalPot': 20000, 'stack': 928750}}, {'JJnyL2vrvzAOyNLMMb6gHw': {'action': ['Checks', 0], 'totalBets': 20000, 'totalPot': 20000, 'stack': 1647750}}], 'flop': [{'JJnyL2vrvzAOyNLMMb6gHw': {'action': ['Bets', 20000], 'totalBets': 20000, 'totalPot': 40000, 'stack': 1627750}}, {'FL4lGd0uLGmUjgC6CYjapQ': {'action': ['Raises', 40000], 'totalBets': 60000, 'totalPot': 80000, 'stack': 888750}}, {'JJnyL2vrvzAOyNLMMb6gHw': {'action': ['Raises', 90000], 'totalBets': 150000, 'totalPot': 170000, 'stack': 1537750}}, {'FL4lGd0uLGmUjgC6CYjapQ': {'action': ['Calls', 70000], 'totalBets': 220000, 'totalPot': 240000, 'stack': 818750}}], 'turn': [{'JJnyL2vrvzAOyNLMMb6gHw': {'action': ['Bets', 160000], 'totalBets': 160000, 'totalPot': 400000, 'stack': 1377750}}, {'FL4lGd0uLGmUjgC6CYjapQ': {'action': ['Calls', 160000], 'totalBets': 320000, 'totalPot': 560000, 'stack': 658750}}], 'river': [], 'win_player': None, 'win_amount': None, 'init_stacks': {'FL4lGd0uLGmUjgC6CYjapQ': 938750, 'JJnyL2vrvzAOyNLMMb6gHw': 1657750}, 'blinds': {'FL4lGd0uLGmUjgC6CYjapQ': 5000, 'JJnyL2vrvzAOyNLMMb6gHw': 10000}}
-#    
-    
     if( (len(lines)-1 >= lineIdx+2) and ('returned' in lines[lineIdx+2]) and 
            not ('Folds' in lines[lineIdx+1]) ):
         tmpLine = lines[lineIdx+2]
@@ -43,9 +28,6 @@ def getReturnAmount(lines, lineIdx, playerId, amount, gameDict, stacks):
         returnAmount = tmpSplit[1].split(' ($')[1].split(')')[0]
         returnAmount = round(float(returnAmount.replace(',','')) * multiplier)
     elif( (len(lines)-1 >= lineIdx+2) and ('returned' in lines[lineIdx+2]) ):
-        
-#        if(amount == 1370000 and playerId == 'JJnyL2vrvzAOyNLMMb6gHw'): assert 0
-        
         initStacks = gameDict['init_stacks']
         playerIds = list(gameDict['blinds'].keys())
         moneyCurrentlyIn = {playerIds[0]:initStacks[playerIds[0]]-stacks[playerIds[0]],
@@ -131,7 +113,7 @@ for f in fNames:
 parsedGames, originalGameData = [], []
 gameEvents = ['pocket_cards', 'flop', 'turn', 'river', 'show_down', 'summary']
 for n,game in enumerate(games):
-#    print(n, len(games))
+    if(n % 10000 == 0): print(n, len(games))
     
     # Only heads up no-limit games & not ante
     if( ('(1 on 1)' in game) & ('No Limit' in game) & ('ante' not in game) ):     
@@ -157,7 +139,12 @@ for n,game in enumerate(games):
         # Blind amounts
         player1BlindAmount = parseBlind(game, player1Id, multiplier)
         player2BlindAmount = parseBlind(game, player2Id, multiplier)
-        
+
+        # Skip if not enough money
+        bigBlind = max(player1BlindAmount,player2BlindAmount)
+        if(min(player1Stack, player2Stack) <= bigBlind):
+            continue
+            
         gameDict['blinds'] = {player1Id:player1BlindAmount, player2Id:player2BlindAmount}
 
         # Remove blinds from stacks
@@ -208,7 +195,7 @@ for n,game in enumerate(games):
                         split = line.split(' Collects $')
                         winPlayerId = split[0]
                         gameDict['win_player'] = winPlayerId
-#                            print('Win player: ' + winPlayerId)
+                        # print('Win player: ' + winPlayerId)
 
 #                if(key == 'summary'):
 #                    if('Total Pot($' in line):
@@ -219,24 +206,11 @@ for n,game in enumerate(games):
                                 
             totalPot += totalBets
                 
-                
-    
+            
         parsedGames.append(gameDict)
         originalGameData.append(game)
 
 
-#game.splitlines()
-#
-#*** POCKET CARDS *** 15000
-#*** POCKET CARDS *** 40000
-#*** POCKET CARDS *** 100000
-#*** FLOP *** 100000
-#*** FLOP *** 140000
-#*** FLOP *** 180000
-
-
-# %%        
-        
 
 
 np.save(PATH+'parsed_games', parsedGames)
