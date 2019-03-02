@@ -157,7 +157,6 @@ def initGame(boardCards, smallBlindPlayerIdx, smallBlindAmount, stacks, holeCard
     players[bigBlindPlayerIdx,5] = 1        # Set big blind for the player
     players = setActingPlayerIdx(players, smallBlindPlayerIdx)  # Small blind acts first on the preflop in heads up
     players[:,7] = 0                # Has player acted?
-#    players[:,8] = 0                # Is player all-in?
     
     # Set game control variables
     controlVariables = np.zeros(3, dtype=np.int)
@@ -213,9 +212,6 @@ def executeAction(board, players, controlVariables, action, availableActions):
                 not (action[1] >= raiseMinMax[0] and action[1] <= raiseMinMax[1]) ):
             print('ERROR 1')
             return None
-#    if( (action[2] > -1) and ((action[2] < raiseMinMax[0]) or (action[2] > raiseMinMax[1])) ):
-#        print('ERROR 2')
-#        return None
     # Check that stacks are not negative
     if(np.any(stacks < 0)):
         print('ERROR 3')
@@ -283,59 +279,6 @@ def executeAction(board, players, controlVariables, action, availableActions):
     availableActions = getAvailableActions(players, board)
 
     return board, players, controlVariables, availableActions
-
-
-
-
-
-
-
-
-
-
-
-
-# %%
-
-tmpCards = np.random.choice(52, size=9, replace=0)
-boardCards = tmpCards[:5]
-holeCards = np.array([tmpCards[5:7],tmpCards[7:]])
-smallBlindPlayerIdx = 1     # Which player is small blind?
-smallBlindAmount = 4
-stacks = np.array([smallBlindAmount*8+2,smallBlindAmount*6+5])
-
-
-
-# %%
-
-
-board, players, controlVariables, availableActions = initGame(boardCards, smallBlindPlayerIdx, 
-                                                              smallBlindAmount, stacks, holeCards)
-
-
-    
-
-
-# %%
-    
-# In 'action' 
-#   1st index is fold
-#   2nd is call amount
-#   3rd is raise amount. 
-# Only one action can be declared, for instance, [-1,-1, 25] means raise to 25.
-
-
-#action = np.array([-1,-1,getRaiseAmount(availableActions)[1]])
-
-action = np.array([-1,getCallAmount(availableActions),-1])
-#action = np.array([1,-1,-1])
-
-
-
-board, players, controlVariables, availableActions = executeAction(board, players, controlVariables, 
-                                                                   action, availableActions)
-
-
 
 
 
