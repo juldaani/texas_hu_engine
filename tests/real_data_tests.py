@@ -5,7 +5,7 @@ Created on Sat Feb 23 21:08:35 2019
 
 @author: juho
 
-Tests are using hand history data which can be downloaded from:
+Tests are using hand histories which can be downloaded from:
     https://drive.google.com/open?id=1jIvFuoJAus2_Z5mhRO5SDIFuyr0Mt7se
 
 Data is also available on (ABS-2009-07-01_2009-07-23...):
