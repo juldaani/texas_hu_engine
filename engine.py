@@ -187,7 +187,7 @@ def initGame(boardCards, smallBlindPlayerIdx, smallBlindAmount, stacks, holeCard
 # Game logic
 def executeAction(board, players, controlVariables, action, availableActions):
     
-    if(getGameEndState == 1):
+    if(getGameEndState(controlVariables) == 1):
         return None
     
     callAmount = getCallAmount(availableActions)

@@ -11,7 +11,11 @@ Tests for evaluating the engine.
 
 import numpy as np
 
-from texas_hu_engine.engine import initGame, executeAction, getCallAmount, getGameEndState, \
+#from texas_hu_engine.engine import initGame, executeAction, getCallAmount, getGameEndState, \
+#    getStacks, getRaiseAmount, getBets, getPot, getBigBlindAmount, getSmallBlindAmount, \
+#    getSmallBlindPlayerIdx, getBigBlindPlayerIdx, getBoardCards, getBoardCardsVisible, \
+#    getPlayerHoleCards, getActingPlayerIdx, getNumPlayersActed, getBettingRound, getWinningPlayerIdx
+from texas_hu_engine.engine_numba import initGame, executeAction, getCallAmount, getGameEndState, \
     getStacks, getRaiseAmount, getBets, getPot, getBigBlindAmount, getSmallBlindAmount, \
     getSmallBlindPlayerIdx, getBigBlindPlayerIdx, getBoardCards, getBoardCardsVisible, \
     getPlayerHoleCards, getActingPlayerIdx, getNumPlayersActed, getBettingRound, getWinningPlayerIdx
@@ -19,7 +23,7 @@ from hand_eval.params import cardToInt, intToCard
 from hand_eval.evaluator import evaluate
 
 SEED = 123
-N_ROUNDS = 50000
+N_ROUNDS = 100000
 
 
 # %%
@@ -358,10 +362,10 @@ for i in range(N_ROUNDS):
         # Get stacks, bets and pot before the action
         stacksBeforeAction = getStacks(players).copy()
         betsBeforeAction = getBets(players).copy()
-        potBeforeAction = getPot(board).copy()
-        numPlayersActed = getNumPlayersActed(players).copy()
+        potBeforeAction = getPot(board)
+        numPlayersActed = getNumPlayersActed(players)
         moneyTotBeforeAction = np.sum(stacksBeforeAction) + np.sum(betsBeforeAction) + potBeforeAction
-        actingPlayerIdx = getActingPlayerIdx(players).copy()
+        actingPlayerIdx = getActingPlayerIdx(players)
         otherPlayerIdx = np.abs(actingPlayerIdx-1)
         isRiver = np.sum(getBoardCardsVisible(board)) == 5
         

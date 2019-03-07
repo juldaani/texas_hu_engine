@@ -19,7 +19,11 @@ In order to run these tests, the data must be first parsed with 'hand_history_pa
 
 import numpy as np
 
-from texas_hu_engine.engine import initGame, executeAction, getCallAmount, getGameEndState, \
+#from texas_hu_engine.engine import initGame, executeAction, getCallAmount, getGameEndState, \
+#    getStacks, getRaiseAmount, getBets, getPot, getBigBlindAmount, getSmallBlindAmount, \
+#    getSmallBlindPlayerIdx, getBigBlindPlayerIdx, getBoardCards, getBoardCardsVisible, \
+#    getPlayerHoleCards, getActingPlayerIdx, getNumPlayersActed, getBettingRound, getWinningPlayerIdx
+from texas_hu_engine.engine_numba import initGame, executeAction, getCallAmount, getGameEndState, \
     getStacks, getRaiseAmount, getBets, getPot, getBigBlindAmount, getSmallBlindAmount, \
     getSmallBlindPlayerIdx, getBigBlindPlayerIdx, getBoardCards, getBoardCardsVisible, \
     getPlayerHoleCards, getActingPlayerIdx, getNumPlayersActed, getBettingRound, getWinningPlayerIdx
