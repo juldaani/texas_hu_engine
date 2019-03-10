@@ -298,10 +298,8 @@ def executeAction(board, players, controlVariables, action, availableActions):
             cardsPlayer1 = np.concatenate((getPlayerHoleCards(players,1), cardsBoard))
             
             ranks = np.zeros(2, dtype=np.uint64)
-            ranks[0] = evaluate(cardsPlayer0, ranks_7cards, LUT_nChooseK_7cards, 
-                                   np.zeros(7, dtype=np.uint64))
-            ranks[1] = evaluate(cardsPlayer1, ranks_7cards, LUT_nChooseK_7cards, 
-                                   np.zeros(7, dtype=np.uint64))
+            ranks[0] = evaluate(cardsPlayer0, ranks_7cards, LUT_nChooseK_7cards)
+            ranks[1] = evaluate(cardsPlayer1, ranks_7cards, LUT_nChooseK_7cards)
             
             winPlayerIdx = np.argmin(ranks)
             

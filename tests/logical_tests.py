@@ -23,7 +23,7 @@ from hand_eval.params import cardToInt, intToCard
 from hand_eval.evaluator import evaluate
 
 SEED = 123
-N_ROUNDS = 100000
+N_ROUNDS = 10000
 
 
 # %%
