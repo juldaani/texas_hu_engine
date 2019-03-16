@@ -189,7 +189,7 @@ def initGame(boardCards, smallBlindPlayerIdx, smallBlindAmount, stacks, holeCard
     players[:,7] = 0                # Has player acted?
     
     # Set game control variables
-    controlVariables = np.zeros(3, dtype=np.int64)
+    controlVariables = np.zeros(3, dtype=np.int16)
     controlVariables[0] = 0         # Betting round
     controlVariables[1] = 0         # Game end state
     controlVariables[2] = -100      # Winning player idx, -1 means tie
@@ -197,11 +197,11 @@ def initGame(boardCards, smallBlindPlayerIdx, smallBlindAmount, stacks, holeCard
     # Check that both players have enough money
     if(not np.all(getStacks(players) >= getBigBlindAmount(board))):
         print('ERROR, not enough money')
-        board = np.zeros(13, dtype=np.int64) - 9999999
-        players = np.zeros((2,8), dtype=np.int64) - 9999999
-        availableActions = np.zeros(3, dtype=np.int64) - 9999999
-        controlVariables = np.zeros(3, dtype=np.int64) - 9999999
-        return board, players, availableActions, controlVariables
+        board[:] = -999
+        players[:] = -999
+        availableActions = np.zeros(3, dtype=np.int64) - 999
+        controlVariables[:] = -999
+        return board, players, controlVariables, availableActions
     
     # Set bets
     players = setBet(players, getSmallBlindAmount(board), smallBlindPlayerIdx)
@@ -218,7 +218,7 @@ def initGame(boardCards, smallBlindPlayerIdx, smallBlindAmount, stacks, holeCard
 @jit(nopython=True, cache=True, fastmath=True, nogil=True)
 def returnInvalidOutput(board, players, controlVariables, availableActions):
     board[:], players[:], controlVariables[:], availableActions[:] = \
-        -9999999, -9999999, -9999999, -9999999
+        -999, -999, -999, -999
     return board, players, controlVariables, availableActions
 
 @jit(nopython=True, cache=True, fastmath=True, nogil=True)
