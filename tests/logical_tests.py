@@ -123,8 +123,12 @@ for i in range(N_ROUNDS):
     holeCards = np.array([tmpCards[5:7],tmpCards[7:]])
     smallBlindPlayerIdx = np.random.randint(0,high=2)
     smallBlindAmount = np.random.randint(1,high=2000)
-    initStacks = np.array([smallBlindAmount*np.random.randint(2,high=40),
-                           smallBlindAmount*np.random.randint(2,high=40)])
+#    initStacks = np.array([smallBlindAmount*np.random.randint(2,high=40),
+#                           smallBlindAmount*np.random.randint(2,high=40)])
+    initStacks = np.array([np.random.randint(smallBlindAmount*2, high=smallBlindAmount*100 + \
+                                             np.random.randint(smallBlindAmount)), 
+                           np.random.randint(smallBlindAmount*2, high=smallBlindAmount*100 + \
+                                             np.random.randint(smallBlindAmount))])
     board, players, controlVariables, availableActions = initGame(boardCards, smallBlindPlayerIdx, 
                                                                   smallBlindAmount, initStacks.copy(), 
                                                                   holeCards)
@@ -230,8 +234,12 @@ for i in range(N_ROUNDS):
     holeCards = np.array([tmpCards[5:7],tmpCards[7:]])
     smallBlindPlayerIdx = np.random.randint(0,high=2)
     smallBlindAmount = np.random.randint(1,high=2000)
-    initStacks = np.array([smallBlindAmount*np.random.randint(2,high=40),
-                           smallBlindAmount*np.random.randint(2,high=40)])
+#    initStacks = np.array([smallBlindAmount*np.random.randint(2,high=40),
+#                           smallBlindAmount*np.random.randint(2,high=40)])
+    initStacks = np.array([np.random.randint(smallBlindAmount*2, high=smallBlindAmount*100 + \
+                                             np.random.randint(smallBlindAmount)), 
+                            np.random.randint(smallBlindAmount*2, high=smallBlindAmount*100 + \
+                                              np.random.randint(smallBlindAmount))])
     board, players, controlVariables, availableActions = initGame(boardCards, smallBlindPlayerIdx, 
                                                                   smallBlindAmount, initStacks.copy(), 
                                                                   holeCards)
@@ -304,8 +312,12 @@ for i in range(N_ROUNDS):
     holeCards = np.array([tmpCards[5:7],tmpCards[7:]])
     smallBlindPlayerIdx = np.random.randint(0,high=2)
     smallBlindAmount = np.random.randint(1,high=2000)
-    initStacks = np.array([smallBlindAmount*np.random.randint(2,high=40),
-                           smallBlindAmount*np.random.randint(2,high=40)])
+#    initStacks = np.array([smallBlindAmount*np.random.randint(2,high=40),
+#                           smallBlindAmount*np.random.randint(2,high=40)])
+    initStacks = np.array([np.random.randint(smallBlindAmount*2, high=smallBlindAmount*100 + \
+                                             np.random.randint(smallBlindAmount)), 
+                           np.random.randint(smallBlindAmount*2, high=smallBlindAmount*100 + \
+                                             np.random.randint(smallBlindAmount))])
     board, players, controlVariables, availableActions = initGame(boardCards, smallBlindPlayerIdx, 
                                                                   smallBlindAmount, initStacks.copy(), 
                                                                   holeCards)
