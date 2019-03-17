@@ -236,7 +236,7 @@ def executeAction(board, players, controlVariables, action, availableActions):
     # In 'action' 
     #   1st index is fold
     #   2nd is call/raise/bet amount
-    # Only one action can be declared, for instance, [-1, 25] means raise/call etc. 25.
+    # Only one action can be declared, for instance, [-1, 25] means raise/call 25
     actionToExecute = np.argmax(action)
     
     # Check that only one action is declared
