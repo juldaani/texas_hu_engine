@@ -12,6 +12,42 @@ from numba import jit
 from texas_hu_engine.engine_numba import initGame, executeAction, getGameEndState
 
 
+class GameState:
+    
+    def __init__(self, boardStates, playerStates, controlVariables, availableActions, validMask=None,
+                 validMaskPlayers=None):
+        self.boards = boardStates
+        self.players = playerStates
+        self.controlVariables = controlVariables
+        self.availableActions = availableActions
+        
+        if(validMask is None):
+            validMask = np.ones(len(boardStates), dtype=np.bool_)
+        if(validMaskPlayers is None):
+            validMaskPlayers = np.ones(len(playerStates), dtype=np.bool_)
+
+        self.validMask = validMask
+        self.validMaskPlayers = validMaskPlayers
+
+
+def initRandomGames(nGames):
+    boards, players, controlVariables, availableActions = initGamesWrapper(nGames)
+    return GameState(boards, players, controlVariables, availableActions)
+
+def executeActions(gameState, actionsToExecute):
+    boards, players, controlVariables, availableActions, validMask, validMaskPlayers = \
+        executeActionsWrapper(actionsToExec, gameState.boards, gameState.players, 
+                              gameState.controlVariables, gameState.availableActions)
+        
+        
+
+state = initRandomGames(5)
+
+boards, players, controlVariables, availableActions, validMask, validMaskPlayers = \
+    executeActionsWrapper(actionsToExec, boards, players, controlVariables, availableActions)
+
+
+
 @jit(nopython=True, cache=True, fastmath=True, nogil=True)
 def initGamesWrapper(nGames):
     
