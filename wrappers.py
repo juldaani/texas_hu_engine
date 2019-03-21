@@ -32,20 +32,17 @@ class GameState:
 
 def initRandomGames(nGames):
     boards, players, controlVariables, availableActions = initGamesWrapper(nGames)
+    
     return GameState(boards, players, controlVariables, availableActions)
+
 
 def executeActions(gameState, actionsToExecute):
     boards, players, controlVariables, availableActions, validMask, validMaskPlayers = \
-        executeActionsWrapper(actionsToExec, gameState.boards, gameState.players, 
+        executeActionsWrapper(actionsToExecute, gameState.boards, gameState.players, 
                               gameState.controlVariables, gameState.availableActions)
-        
-        
-
-state = initRandomGames(5)
-
-boards, players, controlVariables, availableActions, validMask, validMaskPlayers = \
-    executeActionsWrapper(actionsToExec, boards, players, controlVariables, availableActions)
-
+    
+    return GameState(boards, players, controlVariables, availableActions, validMask=validMask,
+                     validMaskPlayers=validMaskPlayers)
 
 
 @jit(nopython=True, cache=True, fastmath=True, nogil=True)
@@ -135,92 +132,92 @@ def executeActionsWrapper(actionsToExec, boards, players, controlVariables, avai
             
     return boards, players, controlVariables, availableActions, validMask, validMaskPlayers
 
-
-
-# %%
-
-from scipy.sparse import csc_matrix, csr_matrix, lil_matrix
-
-nGames = 4
-boards, players, controlVariables, availableActions = initGamesWrapper(nGames)
-
-shapeBoard = boards.shape[1]
-shapePlayers = (2, players.shape[1])
-shapeControlVars = controlVariables.shape[1]
-shapeAvailableActs = availableActions.shape[1]
-
-boardsMat = lil_matrix((nGames, 500*shapeBoard), dtype=np.int32)
-playersMat = lil_matrix((nGames*shapePlayers[0], 500*shapePlayers[1]), dtype=np.int32)
-controlVariablesMat = lil_matrix((nGames, 500*shapeControlVars), dtype=np.int16)
-availableActionsMat = lil_matrix((nGames, 500*shapeAvailableActs), dtype=np.int64)
-
-# This is used for slicing the sparse matrix. We need this for separating the "true" zeros from
-# empty zeros.
-numEventsForGames = np.zeros(nGames, dtype=np.int)
-
-boardsIdx, playersIdx, controlVariablesIdx, availableActionsIdx = 0,0,0,0
-
-
-# %%
-
-
-validMask = np.ones(len(boards), dtype=np.bool_)
-validMaskPlayers = np.ones((len(boards)*2), dtype=np.bool_)
-
-c = 1
-#while(1):
-    
-    #%%
-    
-    #foldIdx = np.random.choice(len(amounts), size=int(0.05*len(amounts)), replace=0)
-    #amounts[foldIdx] = 23151234
-    
-    numEventsForGames[validMask] = c
-    
-    boardsMat[validMask, boardsIdx:boardsIdx+shapeBoard] = boards[validMask]
-    playersMat[validMaskPlayers, playersIdx:playersIdx+shapePlayers[1]] = players[validMaskPlayers]
-    controlVariablesMat[validMask, controlVariablesIdx:controlVariablesIdx+shapeControlVars] = \
-        controlVariables[validMask]
-    availableActionsMat[validMask, availableActionsIdx:availableActionsIdx+shapeAvailableActs] = \
-        availableActions[validMask]
-    
-    boardsIdx += shapeBoard
-    playersIdx += shapePlayers[1]
-    controlVariablesIdx += shapeControlVars
-    availableActionsIdx += shapeAvailableActs
-
-    amounts = availableActions[np.arange(len(boards)),np.random.randint(0,3,size=len(boards))]
-    actionsToExec = createActionsToExecute(amounts)
-    
-    boards, players, controlVariables, availableActions, validMask, validMaskPlayers = \
-        executeActionsWrapper(actionsToExec, boards, players, controlVariables, availableActions)
-    
-    c += 1
-    
-    # All games have finished
-#    if(np.sum(validMask) == 0):
-#        break
-
-
-    print(np.sum(validMask))
-
-#np.sum(controlVariables[:,-1] == -1) / len(controlVariables)
-
-
-
-# %%
-
-kk = 3
-
-asd1 = boardsMat[kk,:numEventsForGames[kk]*shapeBoard].toarray()
-asd2 = availableActionsMat[kk,:numEventsForGames[kk]*shapeAvailableActs].toarray()
-
-asd2.reshape((numEventsForGames[kk],-1))
-asd1.reshape((numEventsForGames[kk],-1)).shape
-
-
-
-
+#
+#
+## %%
+#
+#from scipy.sparse import csc_matrix, csr_matrix, lil_matrix
+#
+#nGames = 4
+#boards, players, controlVariables, availableActions = initGamesWrapper(nGames)
+#
+#shapeBoard = boards.shape[1]
+#shapePlayers = (2, players.shape[1])
+#shapeControlVars = controlVariables.shape[1]
+#shapeAvailableActs = availableActions.shape[1]
+#
+#boardsMat = lil_matrix((nGames, 500*shapeBoard), dtype=np.int32)
+#playersMat = lil_matrix((nGames*shapePlayers[0], 500*shapePlayers[1]), dtype=np.int32)
+#controlVariablesMat = lil_matrix((nGames, 500*shapeControlVars), dtype=np.int16)
+#availableActionsMat = lil_matrix((nGames, 500*shapeAvailableActs), dtype=np.int64)
+#
+## This is used for slicing the sparse matrix. We need this for separating the "true" zeros from
+## empty zeros.
+#numEventsForGames = np.zeros(nGames, dtype=np.int)
+#
+#boardsIdx, playersIdx, controlVariablesIdx, availableActionsIdx = 0,0,0,0
+#
+#
+## %%
+#
+#
+#validMask = np.ones(len(boards), dtype=np.bool_)
+#validMaskPlayers = np.ones((len(boards)*2), dtype=np.bool_)
+#
+#c = 1
+##while(1):
+#    
+#    #%%
+#    
+#    #foldIdx = np.random.choice(len(amounts), size=int(0.05*len(amounts)), replace=0)
+#    #amounts[foldIdx] = 23151234
+#    
+#    numEventsForGames[validMask] = c
+#    
+#    boardsMat[validMask, boardsIdx:boardsIdx+shapeBoard] = boards[validMask]
+#    playersMat[validMaskPlayers, playersIdx:playersIdx+shapePlayers[1]] = players[validMaskPlayers]
+#    controlVariablesMat[validMask, controlVariablesIdx:controlVariablesIdx+shapeControlVars] = \
+#        controlVariables[validMask]
+#    availableActionsMat[validMask, availableActionsIdx:availableActionsIdx+shapeAvailableActs] = \
+#        availableActions[validMask]
+#    
+#    boardsIdx += shapeBoard
+#    playersIdx += shapePlayers[1]
+#    controlVariablesIdx += shapeControlVars
+#    availableActionsIdx += shapeAvailableActs
+#
+#    amounts = availableActions[np.arange(len(boards)),np.random.randint(0,3,size=len(boards))]
+#    actionsToExec = createActionsToExecute(amounts)
+#    
+#    boards, players, controlVariables, availableActions, validMask, validMaskPlayers = \
+#        executeActionsWrapper(actionsToExec, boards, players, controlVariables, availableActions)
+#    
+#    c += 1
+#    
+#    # All games have finished
+##    if(np.sum(validMask) == 0):
+##        break
+#
+#
+#    print(np.sum(validMask))
+#
+##np.sum(controlVariables[:,-1] == -1) / len(controlVariables)
+#
+#
+#
+## %%
+#
+#kk = 3
+#
+#asd1 = boardsMat[kk,:numEventsForGames[kk]*shapeBoard].toarray()
+#asd2 = availableActionsMat[kk,:numEventsForGames[kk]*shapeAvailableActs].toarray()
+#
+#asd2.reshape((numEventsForGames[kk],-1))
+#asd1.reshape((numEventsForGames[kk],-1)).shape
+#
+#
+#
+#
 
 
 
