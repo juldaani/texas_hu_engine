@@ -1,243 +1,157 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Tue Mar 19 20:33:04 2019
+Created on Sat Mar 23 11:36:11 2019
 
 @author: juho
 """
 
 import numpy as np
-from scipy.sparse import lil_matrix
+from numba import jit
 
 from texas_hu_engine.wrappers import initRandomGames, executeActions, createActionsToExecute
 
 
+
 class GameDataContainer:
     
-    def __init__(self, gameStates):
-        self.nGames = len(gameStates.boards)
-        self.__shapeBoard = gameStates.boards.shape[1]
-        self.__shapePlayers = (2, gameStates.players.shape[1])
-        self.__shapeControlVars = gameStates.controlVariables.shape[1]
-        self.__shapeAvailableActs = gameStates.availableActions.shape[1]
-
-        # Initialize sparse matrixes for storing the game data. Sparse matrix was chosen 
-        # as a data structure for storing the game data because it allows easy access to the 
-        # data via numpy array slicing convention.
-        maxNumberGameEvents = 500
-        self.boardsMat = lil_matrix((self.nGames, maxNumberGameEvents*self.__shapeBoard), 
-                                    dtype=np.int32)
-        self.playersMat = lil_matrix((self.nGames*self.__shapePlayers[0], 
-                                      maxNumberGameEvents*self.__shapePlayers[1]), dtype=np.int32)
-        self.controlVariablesMat = lil_matrix((self.nGames, 
-                                               maxNumberGameEvents*self.__shapeControlVars), 
-                                              dtype=np.int16)
-        self.availableActionsMat = lil_matrix((self.nGames, 
-                                               maxNumberGameEvents*self.__shapeAvailableActs), 
-                                              dtype=np.int64)
+    def __init__(self, nGames):
+        self.__indexes = [[] for i in range(nGames)]
+        self.__boardsData, self.__playersData, self.__controlVariablesData, \
+            self.__availableActionsData = None, None, None, None
+    
+    def flattenPlayersData(self, playersData):
+        flattenedData = np.zeros((int(len(playersData)/2), 
+                                  playersData.shape[1]*2), dtype=playersData.dtype)
+        flattenedData[:,:playersData.shape[1]] = playersData[::2]
+        flattenedData[:,playersData.shape[1]:] = playersData[1::2]
         
-        # 'numEventsForGames' is used for slicing the sparse matrix. We need this to be able to 
-        # separate the "true" zeros from empty zeros.
-        self.__numEventsPerGame = np.zeros(self.nGames, dtype=np.int)
-        self.__gameEventCounter = 1
-        
-        self.__boardsIdx, self.__playersIdx, self.__controlVariablesIdx, self.__availableActionsIdx \
-            = 0,0,0,0
-            
-        self.addData(gameStates)
-            
+        return flattenedData
         
     def addData(self, gameStates):
-        validMask, validMaskPlayers = gameStates.validMask, gameStates.validMaskPlayers
-        boardsIdx, shapeBoard = self.__boardsIdx, self.__shapeBoard
-        playersIdx, shapePlayers = self.__playersIdx, self.__shapePlayers
-        controlVariablesIdx, shapeControlVars = self.__controlVariablesIdx, self.__shapeControlVars
-        availableActionsIdx, shapeAvailableActs = self.__availableActionsIdx, \
-            self.__shapeAvailableActs
+        validIndexes = np.nonzero(gameStates.validMask)[0]
+        nDataPts = 0
         
-        self.__numEventsPerGame[validMask] = self.__gameEventCounter
+        if(self.__boardsData is None):
+            self.__boardsData = gameStates.boards[validIndexes]
+            self.__playersData = self.flattenPlayersData(gameStates.players)[validIndexes]
+            self.__controlVariablesData = gameStates.controlVariables[validIndexes]
+            self.__availableActionsData = gameStates.availableActions[validIndexes]
+        else:
+            nDataPts = len(self.__boardsData)
+            self.__boardsData = np.row_stack((self.__boardsData, gameStates.boards[validIndexes]))
+            self.__playersData = np.row_stack((self.__playersData, 
+                                               self.flattenPlayersData(
+                                                     gameStates.players)[validIndexes]))
+            self.__controlVariablesData = np.row_stack((self.__controlVariablesData, 
+                                                      gameStates.controlVariables[validIndexes]))
+            self.__availableActionsData = np.row_stack((self.__availableActionsData, 
+                                                      gameStates.availableActions[validIndexes]))
         
-        # Store game data
-        self.boardsMat[validMask, boardsIdx:boardsIdx+shapeBoard] = gameStates.boards[validMask]
-        self.playersMat[validMaskPlayers, playersIdx:playersIdx+shapePlayers[1]] = \
-            gameStates.players[validMaskPlayers]
-        self.controlVariablesMat[validMask, 
-                                   controlVariablesIdx:controlVariablesIdx+shapeControlVars] = \
-            gameStates.controlVariables[validMask]
-        self.availableActionsMat[validMask, 
-                                   availableActionsIdx:availableActionsIdx+shapeAvailableActs] = \
-            gameStates.availableActions[validMask]
+        dataIndexes = np.arange(len(validIndexes)) + nDataPts
+        for gameIdx,dataIdx in zip(validIndexes,dataIndexes):
+            self.__indexes[gameIdx].append(dataIdx)
         
-        # Increase index counters
-        self.__boardsIdx += shapeBoard
-        self.__playersIdx += shapePlayers[1]
-        self.__controlVariablesIdx += shapeControlVars
-        self.__availableActionsIdx += shapeAvailableActs
-        self.__gameEventCounter += 1
-        
+    def getIndexes(self): return self.__indexes
     
-    def getGame(self, numGame):
-        numEvents = self.__numEventsPerGame[numGame]
-        
-        boards = self.boardsMat[numGame, :numEvents*self.__shapeBoard].toarray()
-        boards = boards.reshape((numEvents,-1))
-        
-        players = self.playersMat[numGame*2:numGame*2+self.__shapePlayers[0], 
-                                  :numEvents*self.__shapePlayers[1]].toarray()
-#        players = players.reshape((2,-1,9))
-        
-        controlVars = self.controlVariablesMat[numGame, :numEvents*self.__shapeControlVars].toarray()
-        controlVars = controlVars.reshape((numEvents,-1))
-        
-        availableActions = self.availableActionsMat[numGame, 
-                                                    :numEvents*self.__shapeAvailableActs].toarray()
-        availableActions = availableActions.reshape((numEvents,-1))
-        
-        return boards, players, controlVars, availableActions
-
-
-class Game:
+    def getData(self): return {'boardsData': self.__boardsData,
+                               'playersData': self.__playersData,
+                               'availableActionsData': self.__availableActionsData,
+                               'controlVariablesData': self.__controlVariablesData}
     
-    def __init__(self, boardStates, playerStates, controlVariables, availableActions):
-        self.boardStates = boardStates
-        self.playerStates = playerStates
-        self.controlVariables = controlVariables
-        self.availableActions = availableActions
-        
-        # TODO: status, winner, win amount..
-#        self.status = 
+    def setIndexes(self, indexes):
+        self.__indexes = indexes
+    
+    def setData(self, data):
+        self.__boardsData = data['boardsData']    
+        self.__playersData = data['playersData']    
+        self.__availableActionsData = data['availableActionsData']   
+        self.__controlVariablesData = data['controlVariablesData']   
 
+# %%
+             
+from texas_hu_engine.wrappers import GameState
 
-import copy
+            
+N = 300
+
+cont = GameDataContainer(N)
+states = initRandomGames(N)
+
+for i in range(100):
+    
+    tmp = np.arange(N).reshape((N,-1))
+    states.availableActions[:] = tmp
+    states.boards[:] = tmp
+    states.controlVariables[:] = tmp
+    states.players[:] = np.tile(tmp.flatten(), (2,1)).T.reshape((N*2,-1))
+#    states.validMask = np.array([1,0,1])
+#    states.validMask = np.array([1,0,0])
+    states.validMask = np.random.randint(0,2,N)
+    
+    cont.addData(states)
 
 
 # %%
+    
+tmpData = cont.getData()
+tmpIdx = cont.getIndexes()
 
-datas = []
+cont = GameDataContainer(1)
+cont.getIndexes()
+cont.getData()
 
-states = initRandomGames(5)
-
-container = GameDataContainer(states)
-datas.append(copy.deepcopy(states))
-
-# %%
-
-acts = createActionsToExecute(states.availableActions[:,0])
-states = executeActions(states, acts)
-
-container.addData(states)
-datas.append(copy.deepcopy(states))
-
-print(states.availableActions)
-
-len(datas)
-
-#boards, players = container.getGame(2)
+cont.setData(tmpData)
+cont.setIndexes(tmpIdx)
 
 # %%
 
-n = 2
+#cont.indexes
+#cont.boardsData
+#cont.playersData
+#cont.availableActionsData
+#cont.controlVariablesData
 
-boards, players, controlVars, availableActs = container.getGame(n)
+for i in range(N):
+    #i = 1
+    idx = cont.getIndexes()[i]
+#    len(idx)
+    assert np.allclose(cont.getData()['boardsData'][idx], i)
+    assert np.allclose(cont.getData()['playersData'][idx], i)
+    assert np.allclose(cont.getData()['availableActionsData'][idx], i)
+    assert np.allclose(cont.getData()['controlVariablesData'][idx], i)
+
+# %%
 
 
-boards.shape
-players.shape
-controlVars.shape
-availableActs.shape
 
 
-ii = 0
-datas[ii].players[n*2:n*2+2]
-asd[ii*2:ii*2+2,:]
-#players[:,:,ii]
+asd = GameDataContainer.flattenPlayersData(states.players)
 
-asd = players.reshape((9*2,-1))
+playersData = states.players
 
+tmpPlayersData = np.zeros((int(len(playersData)/2), 
+                           playersData.shape[1]*2), dtype=playersData.dtype)
+tmpPlayersData[:,:playersData.shape[1]] = playersData[::2]
+tmpPlayersData[:,playersData.shape[1]:] = playersData[1::2]
+
+
+
+boards = states.boards
+
+tmpPlayers = states.players
+
+asd = np.zeros((len(boards), tmpPlayers.shape[1]*2), dtype=tmpPlayers.dtype)
+
+asd[:,:tmpPlayers.shape[1]] = tmpPlayers[::2]
+asd[:,tmpPlayers.shape[1]:] = tmpPlayers[1::2]
+
+tmpPlayers.shape
 asd.shape
-states.players.shape
-
-
-# %%
 
 
 
-nGames = 4
-boards, players, controlVariables, availableActions = initGamesWrapper(nGames)
 
-shapeBoard = boards.shape[1]
-shapePlayers = (2, players.shape[1])
-shapeControlVars = controlVariables.shape[1]
-shapeAvailableActs = availableActions.shape[1]
-
-boardsMat = lil_matrix((nGames, 500*shapeBoard), dtype=np.int32)
-playersMat = lil_matrix((nGames*shapePlayers[0], 500*shapePlayers[1]), dtype=np.int32)
-controlVariablesMat = lil_matrix((nGames, 500*shapeControlVars), dtype=np.int16)
-availableActionsMat = lil_matrix((nGames, 500*shapeAvailableActs), dtype=np.int64)
-
-# This is used for slicing the sparse matrix. We need this for separating the "true" zeros from
-# empty zeros.
-numEventsForGames = np.zeros(nGames, dtype=np.int)
-
-boardsIdx, playersIdx, controlVariablesIdx, availableActionsIdx = 0,0,0,0
-
-
-# %%
-
-
-validMask = np.ones(len(boards), dtype=np.bool_)
-validMaskPlayers = np.ones((len(boards)*2), dtype=np.bool_)
-
-c = 1
-#while(1):
-    
-    #%%
-    
-    #foldIdx = np.random.choice(len(amounts), size=int(0.05*len(amounts)), replace=0)
-    #amounts[foldIdx] = 23151234
-    
-    numEventsForGames[validMask] = c
-    
-    boardsMat[validMask, boardsIdx:boardsIdx+shapeBoard] = boards[validMask]
-    playersMat[validMaskPlayers, playersIdx:playersIdx+shapePlayers[1]] = players[validMaskPlayers]
-    controlVariablesMat[validMask, controlVariablesIdx:controlVariablesIdx+shapeControlVars] = \
-        controlVariables[validMask]
-    availableActionsMat[validMask, availableActionsIdx:availableActionsIdx+shapeAvailableActs] = \
-        availableActions[validMask]
-    
-    boardsIdx += shapeBoard
-    playersIdx += shapePlayers[1]
-    controlVariablesIdx += shapeControlVars
-    availableActionsIdx += shapeAvailableActs
-
-    amounts = availableActions[np.arange(len(boards)),np.random.randint(0,3,size=len(boards))]
-    actionsToExec = createActionsToExecute(amounts)
-    
-    boards, players, controlVariables, availableActions, validMask, validMaskPlayers = \
-        executeActionsWrapper(actionsToExec, boards, players, controlVariables, availableActions)
-    
-    c += 1
-    
-    # All games have finished
-#    if(np.sum(validMask) == 0):
-#        break
-
-
-    print(np.sum(validMask))
-
-#np.sum(controlVariables[:,-1] == -1) / len(controlVariables)
-
-
-
-# %%
-
-kk = 3
-
-asd1 = boardsMat[kk,:numEventsForGames[kk]*shapeBoard].toarray()
-asd2 = availableActionsMat[kk,:numEventsForGames[kk]*shapeAvailableActs].toarray()
-
-asd2.reshape((numEventsForGames[kk],-1))
-asd1.reshape((numEventsForGames[kk],-1)).shape
 
 
 
