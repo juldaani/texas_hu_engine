@@ -7,7 +7,7 @@ Created on Sat Mar 16 13:02:17 2019
 """
 
 import numpy as np
-from numba import jit
+from numba import jit, prange
 
 from texas_hu_engine.engine_numba import initGame, executeAction, getGameEndState
 
@@ -45,15 +45,14 @@ def executeActions(gameState, actionsToExecute):
                      validMaskPlayers=validMaskPlayers)
 
 
-@jit(nopython=True, cache=True, fastmath=True, nogil=True)
+@jit(nopython=True, parallel=True, fastmath=True, nogil=True)
 def initGamesWrapper(nGames):
-    
     boardsArr = np.zeros((nGames, 13), dtype=np.int32)
     playersArr = np.zeros((nGames*2, 8), dtype=np.int32)
     controlVariablesArr = np.zeros((nGames, 3), dtype=np.int16)
     availableActionsArr = np.zeros((nGames, 3), dtype=np.int64)
     
-    for i in range(nGames):
+    for i in prange(nGames):
         tmpCards = np.random.choice(52, size=9, replace=0)
         boardCards = tmpCards[:5]
         holeCards = np.zeros((2,2), dtype=np.int64)
@@ -99,13 +98,13 @@ def createActionsToExecute(amounts):
     return actionsToExec
 
 
-@jit(nopython=True, cache=True, fastmath=True, nogil=True)
+@jit(nopython=True, parallel=True, fastmath=True, nogil=True)
 def executeActionsWrapper(actionsToExec, boards, players, controlVariables, availableActions):
     
     validMask = np.zeros(len(boards), dtype=np.bool_)
     validMaskPlayers = np.zeros((len(boards)*2), dtype=np.bool_)
     
-    for i in range(len(boards)):
+    for i in prange(len(boards)):
         curBoard = boards[i]
         curPlayers = players[i*2:i*2+2,:]
         curControlVars = controlVariables[i]
