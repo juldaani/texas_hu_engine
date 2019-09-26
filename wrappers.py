@@ -30,10 +30,10 @@ class GameState:
         self.validMaskPlayers = validMaskPlayers
 
 
-def initRandomGames(nGames):
-    boards, players, controlVariables, availableActions = initGamesWrapper(nGames)
+def initRandomGames(nGames, seed=-1):
+    boards, players, controlVariables, availableActions, initStacks = initGamesWrapper(nGames, seed=seed)
     
-    return GameState(boards, players, controlVariables, availableActions)
+    return GameState(boards, players, controlVariables, availableActions), initStacks
 
 
 def executeActions(gameState, actionsToExecute):
@@ -45,14 +45,18 @@ def executeActions(gameState, actionsToExecute):
                      validMaskPlayers=validMaskPlayers)
 
 
-@jit(nopython=True, parallel=True, fastmath=True, nogil=True)
-def initGamesWrapper(nGames):
+@jit(nopython=True, fastmath=True, nogil=True)
+def initGamesWrapper(nGames, seed=-1):
+    if(seed != -1):
+        np.random.seed(seed)
+    
     boardsArr = np.zeros((nGames, 13), dtype=np.int32)
     playersArr = np.zeros((nGames*2, 8), dtype=np.int32)
     controlVariablesArr = np.zeros((nGames, 3), dtype=np.int16)
     availableActionsArr = np.zeros((nGames, 3), dtype=np.int64)
+    initStacksArr = np.zeros((nGames, 2), dtype=np.int64)
     
-    for i in prange(nGames):
+    for i in range(nGames):
         tmpCards = np.random.choice(52, size=9, replace=0)
         boardCards = tmpCards[:5]
         holeCards = np.zeros((2,2), dtype=np.int64)
@@ -72,8 +76,9 @@ def initGamesWrapper(nGames):
         playersArr[i*2:i*2+2,:] = players
         controlVariablesArr[i,:] = controlVariables
         availableActionsArr[i,:] = availableActions
+        initStacksArr[i,:] = initStacks
         
-    return boardsArr, playersArr, controlVariablesArr, availableActionsArr
+    return boardsArr, playersArr, controlVariablesArr, availableActionsArr, initStacksArr
     
 
 @jit(nopython=True, cache=True, fastmath=True, nogil=True)
