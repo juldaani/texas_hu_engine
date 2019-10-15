@@ -45,7 +45,7 @@ def executeActions(gameState, actionsToExecute):
                      validMaskPlayers=validMaskPlayers)
 
 
-@jit(nopython=True, fastmath=True, nogil=True)
+@jit(nopython=True, fastmath=True)
 def initGamesWrapper(nGames, seed=-1):
     if(seed != -1):
         np.random.seed(seed)
@@ -81,7 +81,7 @@ def initGamesWrapper(nGames, seed=-1):
     return boardsArr, playersArr, controlVariablesArr, availableActionsArr, initStacksArr
     
 
-@jit(nopython=True, cache=True, fastmath=True, nogil=True)
+@jit(nopython=True, cache=True, fastmath=True)
 def createActionsToExecute(amounts):
     """
     Create action that can be fed into holdem engine.
@@ -103,7 +103,7 @@ def createActionsToExecute(amounts):
     return actionsToExec
 
 
-@jit(nopython=True, fastmath=True, nogil=True)
+@jit(nopython=True, fastmath=True)
 def executeActionsWrapper(actionsToExec, boards, players, controlVariables, availableActions):
     
     validMask = np.zeros(len(boards), dtype=np.bool_)
