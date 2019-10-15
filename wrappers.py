@@ -103,13 +103,13 @@ def createActionsToExecute(amounts):
     return actionsToExec
 
 
-@jit(nopython=True, parallel=True, fastmath=True, nogil=True)
+@jit(nopython=True, fastmath=True, nogil=True)
 def executeActionsWrapper(actionsToExec, boards, players, controlVariables, availableActions):
     
     validMask = np.zeros(len(boards), dtype=np.bool_)
     validMaskPlayers = np.zeros((len(boards)*2), dtype=np.bool_)
     
-    for i in prange(len(boards)):
+    for i in range(len(boards)):
         curBoard = boards[i]
         curPlayers = players[i*2:i*2+2,:]
         curControlVars = controlVariables[i]
