@@ -14,60 +14,60 @@ from hand_eval.params import ranks_7cards, LUT_nChooseK_7cards
 
 
 # Players .....................................................................
-@jit(nopython=True, cache=True, fastmath=True, nogil=True)
+@jit(nopython=True, cache=True, fastmath=True)
 def getStacks(playerStates): return playerStates[:,2]
 
-@jit(nopython=True, cache=True, fastmath=True, nogil=True)
+@jit(nopython=True, cache=True, fastmath=True)
 def getBets(playerStates): return playerStates[:,3]
 
-@jit(nopython=True, cache=True, fastmath=True, nogil=True)
+@jit(nopython=True, cache=True, fastmath=True)
 def setBet(playerStates, amount, playerIdx):
     playerStates[playerIdx,2] -= amount     # Stack
     playerStates[playerIdx,3] += amount     # Bets
     return playerStates
 
-@jit(nopython=True, cache=True, fastmath=True, nogil=True)
+@jit(nopython=True, cache=True, fastmath=True)
 def setActingPlayerIdx(playerStates, playerIdx): 
     otherPlayerIdx = np.abs(playerIdx-1)
     playerStates[playerIdx,6] = 1
     playerStates[otherPlayerIdx,6] = 0
     return playerStates
 
-@jit(nopython=True, cache=True, fastmath=True, nogil=True)
+@jit(nopython=True, cache=True, fastmath=True)
 def getActingPlayerIdx(playerStates): return np.where(playerStates[:,6] != 0)[0][0]
 
-@jit(nopython=True, cache=True, fastmath=True, nogil=True)
+@jit(nopython=True, cache=True, fastmath=True)
 def getBigBlindPlayerIdx(playerState): return np.argmax(playerState[:,5])
 
-@jit(nopython=True, cache=True, fastmath=True, nogil=True)
+@jit(nopython=True, cache=True, fastmath=True)
 def getSmallBlindPlayerIdx(playerState): return np.argmax(playerState[:,4])
 
-@jit(nopython=True, cache=True, fastmath=True, nogil=True)
+@jit(nopython=True, cache=True, fastmath=True)
 def setHasPlayerActed(playerState, playerIdx):
     playerState[playerIdx,7] = 1
     return playerState
 
-@jit(nopython=True, cache=True, fastmath=True, nogil=True)
+@jit(nopython=True, cache=True, fastmath=True)
 def getNumPlayersActed(playerState): return np.sum(playerState[:,7])
 
-@jit(nopython=True, cache=True, fastmath=True, nogil=True)
+@jit(nopython=True, cache=True, fastmath=True)
 def getPlayerHoleCards(playerState, playerIdx): return playerState[playerIdx,:2]
     
 
 # Board .......................................................................
-@jit(nopython=True, cache=True, fastmath=True, nogil=True)
+@jit(nopython=True, cache=True, fastmath=True)
 def getSmallBlindAmount(boardState): return boardState[1]
 
-@jit(nopython=True, cache=True, fastmath=True, nogil=True)
+@jit(nopython=True, cache=True, fastmath=True)
 def getBigBlindAmount(boardState): return boardState[2]
 
-@jit(nopython=True, cache=True, fastmath=True, nogil=True)
+@jit(nopython=True, cache=True, fastmath=True)
 def moveBetsToPot(playerState, boardState):
     boardState[0] += np.sum(playerState[:,3])
     playerState[:,3] = 0
     return playerState, boardState
 
-@jit(nopython=True, cache=True, fastmath=True, nogil=True)
+@jit(nopython=True, cache=True, fastmath=True)
 def movePotToPlayer(playerState, playerIdx, boardState):
     if(playerIdx == -1):    # If tie
         halfPot = boardState[0] / 2
@@ -80,23 +80,23 @@ def movePotToPlayer(playerState, playerIdx, boardState):
         
     return playerState, boardState
     
-@jit(nopython=True, cache=True, fastmath=True, nogil=True)
+@jit(nopython=True, cache=True, fastmath=True)
 def getBoardCardsVisible(boardState): return boardState[3:8]
     
-@jit(nopython=True, cache=True, fastmath=True, nogil=True)
+@jit(nopython=True, cache=True, fastmath=True)
 def setBoardCardsVisible(boardState, visibleMask):
     boardState[3:8] = visibleMask
     return boardState
 
-@jit(nopython=True, cache=True, fastmath=True, nogil=True)
+@jit(nopython=True, cache=True, fastmath=True)
 def getBoardCards(boardState): return boardState[8:]
 
-@jit(nopython=True, cache=True, fastmath=True, nogil=True)
+@jit(nopython=True, cache=True, fastmath=True)
 def getPot(boardState): return boardState[0]
 
 
 # Actions .....................................................................
-@jit(nopython=True, cache=True, fastmath=True, nogil=True)
+@jit(nopython=True, cache=True, fastmath=True)
 def getAvailableActions(playerState, boardState):
     actingPlayerIdx = getActingPlayerIdx(playerState)
     bets = getBets(playerState)
@@ -113,15 +113,15 @@ def getAvailableActions(playerState, boardState):
     
     return np.concatenate((np.array([callAmount]),raiseMinMax))
 
-@jit(nopython=True, cache=True, fastmath=True, nogil=True)
+@jit(nopython=True, cache=True, fastmath=True)
 def getCallAmount(availableActions): return availableActions[0]
 
-@jit(nopython=True, cache=True, fastmath=True, nogil=True)
+@jit(nopython=True, cache=True, fastmath=True)
 def getRaiseAmount(availableActions): return availableActions[1:]
 
 
 # Control variables ...........................................................
-@jit(nopython=True, cache=True, fastmath=True, nogil=True)
+@jit(nopython=True, cache=True, fastmath=True)
 def setGameEndState(controlVariables, availableActions, winPlayerIdx):
     controlVariables[0] = -1                # Betting round
     controlVariables[1] = 1                 # Game end state
@@ -129,25 +129,25 @@ def setGameEndState(controlVariables, availableActions, winPlayerIdx):
     availableActions[:] = -1
     return controlVariables, availableActions
 
-@jit(nopython=True, cache=True, fastmath=True, nogil=True)
+@jit(nopython=True, cache=True, fastmath=True)
 def getGameEndState(controlVariables):
     return controlVariables[1]
 
-@jit(nopython=True, cache=True, fastmath=True, nogil=True)
+@jit(nopython=True, cache=True, fastmath=True)
 def getBettingRound(controlVariables): return controlVariables[0]
     
-@jit(nopython=True, cache=True, fastmath=True, nogil=True)
+@jit(nopython=True, cache=True, fastmath=True)
 def setBettingRound(controlVariables, bettingRound): 
     controlVariables[0] = bettingRound
     return controlVariables
 
-@jit(nopython=True, cache=True, fastmath=True, nogil=True)
+@jit(nopython=True, cache=True, fastmath=True)
 def getWinningPlayerIdx(controlVariables):
     return controlVariables[2]
 
 
 # Initializers ................................................................
-@jit(nopython=True, cache=True, fastmath=True, nogil=True)
+@jit(nopython=True, cache=True, fastmath=True)
 def initNextBettingRound(boardState, playerState, controlVariables):
     playerState[:,7] = 0    # Reset has players acted
     
@@ -167,7 +167,7 @@ def initNextBettingRound(boardState, playerState, controlVariables):
     
     return boardState, playerState, controlVariables
 
-@jit(nopython=True, cache=True, fastmath=True, nogil=True)
+@jit(nopython=True, cache=True, fastmath=True)
 def initGame(boardCards, smallBlindPlayerIdx, smallBlindAmount, stacks, holeCards):
     # Set board
     board = np.zeros(13, dtype=np.int64)
@@ -215,13 +215,13 @@ def initGame(boardCards, smallBlindPlayerIdx, smallBlindAmount, stacks, holeCard
     
 # .............................................................................
 # Game logic
-@jit(nopython=True, cache=True, fastmath=True, nogil=True)
+@jit(nopython=True, cache=True, fastmath=True)
 def returnInvalidOutput(board, players, controlVariables, availableActions):
     board[:], players[:], controlVariables[:], availableActions[:] = \
         -999, -999, -999, -999
     return board, players, controlVariables, availableActions
 
-@jit(nopython=True, cache=True, fastmath=True, nogil=True)
+@jit(nopython=True, cache=True, fastmath=True)
 def executeAction(board, players, controlVariables, action, availableActions):
     
     # Do not continue if the game has already finished
