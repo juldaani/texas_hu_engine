@@ -221,7 +221,7 @@ def returnInvalidOutput(board, players, controlVariables, availableActions):
         -999, -999, -999, -999
     return board, players, controlVariables, availableActions
 
-@jit(nopython=True, cache=True, fastmath=True, nogil=True)
+@jit(nopython=True, fastmath=True, nogil=True)
 def executeAction(board, players, controlVariables, action, availableActions):
     
     # Do not continue if the game has already finished
