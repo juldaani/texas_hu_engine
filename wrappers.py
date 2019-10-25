@@ -30,12 +30,6 @@ class GameState:
         self.validMaskPlayers = validMaskPlayers
 
 
-def initRandomGames(nGames, seed=-1):
-    boards, players, controlVariables, availableActions, initStacks = initGamesWrapper(nGames, seed=seed)
-    
-    return GameState(boards, players, controlVariables, availableActions), initStacks
-
-
 def executeActions(gameState, actionsToExecute):
     boards, players, controlVariables, availableActions, validMask, validMaskPlayers = \
         executeActionsWrapper(actionsToExecute, gameState.boards, gameState.players, 
@@ -43,6 +37,12 @@ def executeActions(gameState, actionsToExecute):
     
     return GameState(boards, players, controlVariables, availableActions, validMask=validMask,
                      validMaskPlayers=validMaskPlayers)
+
+
+def initRandomGames(nGames, seed=-1):
+    boards, players, controlVariables, availableActions, initStacks = initGamesWrapper(nGames, seed=seed)
+    
+    return GameState(boards, players, controlVariables, availableActions), initStacks
 
 
 @jit(nopython=True, fastmath=True)
